@@ -63,9 +63,83 @@ class Wall(Buildings):
         self.__height=1
         self.__string=["/"]
         Buildings.add(self,self.x,self.y,self.__string)
+        
+class Troops:
+    def addtroop(self,x,y,string):
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            print("\033["+str(posx)+";"+str(posy)+"H"+string[i],end="")
+        
+class Barbarian(Troops):
+    def __init__(self,x,y):
+        self.__health=30
+        self.__damage=6
+        self.__string=["["+"B"+"]/",("/\\")]
+        self.x=x
+        self.y=y
+        self.clear=[(" "+" "+"  "),("  ")]
+        Troops.addtroop(self,self.x,self.y,self.__string)
+        
+class King(Troops):
+    def __init__(self,x,y):
+        self.__health=30
+        self.__damage=6
+        self.__string=[("_"*4),"{"+" K"+"}/",(" /\\")]
+        self.x=x
+        self.y=y
+        self.clear=[(" "*4),(" "+"  "+"  "),("  ")]
+        Troops.addtroop(self,self.x,self.y,self.__string)
+    
+    
+class Get:
+    """Class to get input."""
+
+    def __call__(self):
+        """Defining __call__."""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+            if(ch=="w"):
+                print("")
+                Barbarian(5,30)
+            if(ch=="a"):
+                print("")
+                King(5,50)
+            if(ch=="e"):
+                return 1
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class AlarmException(Exception):
+    """Handling alarm exception."""
+    pass
+
+
+def alarmHandler(signum, frame):
+    """Handling timeouts."""
+    raise AlarmException
+
+
+def input_to(callback,timeout=0.1):
+    """Taking input from user."""
+    signal.signal(signal.SIGALRM, alarmHandler)
+    signal.setitimer(signal.ITIMER_REAL, timeout)
+    try:
+        text=callback()
+        signal.alarm(0)
+        return text
+    except AlarmException:
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+        return None
 
 
 
+
+exit=0
 th=TownHall(21,38)
 h1=Hut(10,20)
 h2=Hut(10,30)
@@ -103,45 +177,26 @@ for i in range(wall2_attrib[0]*2):
 endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
 for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
     Wall(endwall[0]+i,endwall[1])
+print("")
 
 
 
 
-class Get:
-    """Class to get input."""
-
-    def __call__(self):
-        """Defining __call__."""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
-
-class AlarmException(Exception):
-    """Handling alarm exception."""
-    pass
+#-----------------------------------------------Main Code------------------------------------
+#"\033["+str(posx)+";"+str(posy)+"H"+string[i],end=""
+def getinput():
+    a=Get()
+    ans=a.__call__()
+    return ans
+    
+position1=(5,30)
+position2=(5,50)
+while(1):
+    ans=input_to(getinput)
+    if(ans==1):
+        break
+    print("")
 
 
-def alarmHandler(signum, frame):
-    """Handling timeouts."""
-    raise AlarmException
-
-
-def input_to(getch, timeout=0.1):
-    """Taking input from user."""
-    signal.signal(signal.SIGALRM, alarmHandler)
-    signal.setitimer(signal.ITIMER_REAL, timeout)
-    try:
-        text = getch()
-        signal.alarm(0)
-        return text
-    except AlarmException:
-        signal.signal(signal.SIGALRM, signal.SIG_IGN)
-        return None
-
+    
 
