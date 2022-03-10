@@ -16,6 +16,10 @@ global village
 global mapping
 global k
 global timetick
+global rage_spell
+global timeout,rage,ragetime
+rage=0
+timeout=0.1
 timetick=time.time()
 #king=("_"*4),"{"+" K"+"}/",(" /\\")
 village=[list(" "*80) for i in range(45)]
@@ -23,11 +27,13 @@ global walls
 walls={}
 global king_spawned
 king_spawned=0
-
+global active_spell
+active_spell=[]
 global barabarians
 barabarians=[]
 global symbol
 symbol=0
+
 
 class Buildings:
     def add(self,x,y,string):
@@ -53,7 +59,7 @@ class Hut(Buildings):
         self.x=x;self.y=y
         self.__width=2
         self.__height=2
-        self.health=200
+        self.health=350
         self.destroyed=0
         self.orig=200
         self.__string=[(" /\\ "),"[ H]"]
@@ -80,7 +86,7 @@ class TownHall(Buildings):
         self.x=x;self.y=y
         self.__width=6
         self.__height=5
-        self.health=400
+        self.health=500
         self.destroyed=0
         self.orig=400
         self.__string=[("+"+"-"*4+"+"),("|"+"TOWN"+"|"),("|"+"HALL"+"|"),(("|"+" "*4+"|")*1),("+"+"-"*4+"+")]
@@ -106,11 +112,13 @@ class Cannon(Buildings):
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=3
+        self.range=10
         self.__height=1
         self.__string=["[<C>]"]
-        self.health=200
+        self.health=350
         self.orig=200
         self.destroyed=0
+        self.damage=10
         self.__clear=["     "]
         Buildings.add(self,self.x,self.y,self.__string)
     
@@ -126,7 +134,22 @@ class Cannon(Buildings):
     
     def mid_color(self):
         Buildings.mid_color(self,self.x,self.y,self.__string)
-
+    
+    def attack(self):
+        global barabarians,k,king_spawned
+        flag=0
+        for i in range(len(barabarians)):
+            if(abs(barabarians[i].x-self.x)+abs(barabarians[i].y-self.y)<=10 and barabarians[i].dead==0):
+                barabarians[i].health-=self.damage
+                flag=1
+                break
+        if(flag==0 and king_spawned==1):
+            if(abs(k.x-self.x)+abs(k.y-self.y)<=10):
+                k.health-=self.damage
+        
+            
+            
+        
         
         
 
@@ -138,7 +161,7 @@ class Wall(Buildings):
         self.__height=1
         self.destroyed=0
         self.__string=["/"]
-        self.health=120
+        self.health=200
         self.__clear=[" "]
         Buildings.add(self,self.x,self.y,self.__string)
     
@@ -174,6 +197,24 @@ class Troops:
             
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.BLUE+string[i],end="")
             print(Style.RESET_ALL,end="")
+            
+    def low_color(self,x,y,string):
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            print("\033["+str(posx)+";"+str(posy)+"H"+Back.RED+string[i],end="")
+            
+    def mid_color(self,x,y,string):
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            print("\033["+str(posx)+";"+str(posy)+"H"+Back.YELLOW+string[i],end="")
+            
+            
+    def destroy(self,x,y,string):
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+
     
             
             
@@ -181,10 +222,13 @@ class Troops:
         
 class Barbarian(Troops):
     def __init__(self,x,y):
-        self.__health=30
+        self.health=50
         self.name="b"
-        self.__damage=6
+        self.damage=6
+        self.speed=1
+        self.orig=50
         self.__width=1
+        self.dead=0
         self.__height=1
         self.__string=["B"]
         self.x=x
@@ -202,16 +246,14 @@ class Barbarian(Troops):
     def attack(self,i,j):
         if(village[self.x+i][self.y+j]!="w"):
             building_index=mapping[village[self.x+i][self.y+j]]
-            buildings[building_index].health-=self.__damage
+            buildings[building_index].health-=self.damage
         else:
             target=walls[str(self.x+i)+"_"+str(self.y+j)]
-            target.health-=self.__damage
+            target.health-=self.damage
             target.destroyed=1
             if(target.health<=0):
                 target.clear()
                 
-            
-    
     def nearest(self):
         dis=float("inf")
         ind=0
@@ -220,17 +262,19 @@ class Barbarian(Troops):
                 dis=abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)
                 ind=i
         return ind
-            
+    
+
+    def get_string(self):
+        return self.__string
         
-        
-        
-        
-        
+   
 class King(Troops):
     def __init__(self,x,y):
-        self.__health=100
+        self.health=200
         self.name="k"
-        self.__damage=50
+        self.orig=200
+        self.damage=50
+        self.speed=1
         self.__string=["K"]
         self.x=x
         self.movement=[0,1]
@@ -247,23 +291,56 @@ class King(Troops):
     def attack(self,i,j):
         if(village[self.x+i][self.y+j]!="w" and village[self.x+i][self.y+j]!=" "):
             building_index=mapping[village[self.x+i][self.y+j]]
-            buildings[building_index].health-=self.__damage
+            buildings[building_index].health-=self.damage
             
         elif(village[self.x+i][self.y+j]=="w"):
             target=walls[str(self.x+i)+"_"+str(self.y+j)]
-            target.health-=self.__damage
+            target.health-=self.damage
             target.destroyed=1
             if(target.health<=0):
                 target.clear()
+class Spells:
+    def __init__(self):
+        self.time=5 
+        
+    def spell(self,speed):
+        global timeout,barabarians,k,king_spawned
+        self.speed=speed
+        timeout=timeout/speed
+        for i in range(len(barabarians)):
+            barabarians[i].damage*=2
+        if(king_spawned==1):
+            k.damage*=2
         
         
-            
-    
+    def deactive(self):
+        global timeout,barabarians,k,king_spawned
+        timeout*=self.speed
+        for i in range(len(barabarians)):
+            barabarians[i].damage//=2
+        if(king_spawned==1):
+            k.damage//=2
+        
+
+class Rage(Spells):
+    raged=0
+    def __init__(self):
+        self.time=5
+        
+
+class Heal(Spells):
+    def __init__(self):
+        self.time=5
+    def spell(self):
+        print("heal")
+        
+        
     
 class Get:
     def __call__(self):
         global king_spawned
         global timetick
+        global active_spell,rage,ragetime,rage_spell
         global k
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -273,11 +350,9 @@ class Get:
             ch = sys.stdin.read(1)
             print("\r",end="")
             if(ch=="z"):
-             
                 b=Barbarian(position1[0],position1[1])
                 barabarians.append(b)
             if(ch=="x"):
-                
                 b=Barbarian(position2[0],position2[1])
                 barabarians.append(b)
             if(ch=="c"):
@@ -298,6 +373,15 @@ class Get:
                 k.move(1,0);k.movement=[1,0]
             if(ch==" " and king_spawned==1):
                 k.attack(k.movement[0],k.movement[1])                    
+            if(ch=="j"):
+                if(rage==0):
+                    rage_spell=Rage()
+                    rage_spell.spell(4)
+                    ragetime=time.time()
+                    rage=1
+            if(ch=="i"):
+                h=Heal()
+                h.spell()
             if(ch=="e"):
                 return 1
             timetick=time.time()
@@ -350,6 +434,8 @@ cannon5=Cannon(38,10);symbol="o"
 cannon6=Cannon(5,40)
 global buildings
 buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,h9,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+global cannons
+cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
 
 
 thpos=(21,38)
@@ -401,6 +487,7 @@ position2=(45,20)
 position3=(40,70)
 
 def animate():
+    global rage
     for i in range(len(buildings)):
         if(buildings[i].health<(70/100)*buildings[i].orig and buildings[i].destroyed==0):
             buildings[i].mid_color()
@@ -408,27 +495,44 @@ def animate():
             buildings[i].low_color()
         if(buildings[i].health<=0 and buildings[i].destroyed==0):
             buildings[i].clear()
+    if(rage==1):
+        if(time.time()-ragetime>5):
+            rage=0
+            rage_spell.deactive()
+             
     for i in range(len(barabarians)):
-        result=barabarians[i].nearest()
-        locx=buildings[result].x;locy=buildings[result].y
-        dirx=(locx-barabarians[i].x);diry=(locy-barabarians[i].y)
-        movex=0 if(dirx==0) else (locx-barabarians[i].x)/abs(locx-barabarians[i].x)
-        movey=0 if(diry==0) else (locy-barabarians[i].y)/abs(locy-barabarians[i].y)
-        barabarians[i].move(int(movex),int(movey))
+        if(barabarians[i].dead==0):
+            result=barabarians[i].nearest()
+            locx=buildings[result].x;locy=buildings[result].y
+            dirx=(locx-barabarians[i].x);diry=(locy-barabarians[i].y)
+            movex=0 if(dirx==0) else (locx-barabarians[i].x)/abs(locx-barabarians[i].x)
+            movey=0 if(diry==0) else (locy-barabarians[i].y)/abs(locy-barabarians[i].y)
+            barabarians[i].move(int(movex),int(movey))
+        if(barabarians[i].health<=(70/100)*barabarians[i].orig and barabarians[i].dead==0):
+            barabarians[i].mid_color(barabarians[i].x,barabarians[i].y,barabarians[i].get_string())
+        if(barabarians[i].health<=(30/100)*barabarians[i].orig and barabarians[i].dead==0):
+            barabarians[i].low_color(barabarians[i].x,barabarians[i].y,barabarians[i].get_string())
+        if(barabarians[i].health<=0 and barabarians[i].dead==0):
+            barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear)
+            barabarians[i].dead=1
+            
+    for i in range(len(cannons)):
+        if(cannons[i].destroyed==0):
+            c=cannons[i].attack()
 
-        
-    
-        
+
 while(1):
     os.system("stty -echo")
-    ans=input_to(getinput)
+    ans=input_to(getinput,timeout)
     if(ans==1):
         os.system("stty echo")
         break
     animate()
+    
     print("",end="")
     print("\r",end="")
-    time.sleep(0.2)
+    time.sleep(timeout)
+    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
     
 
     
