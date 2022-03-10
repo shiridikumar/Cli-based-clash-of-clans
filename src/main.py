@@ -12,26 +12,22 @@ print(vertical,end="")
 print(horizontal)
 starty=6;prevx=starty
 startx=3;prevy=starty
-global village
-global mapping
-global k
-global timetick
-global rage_spell
-global timeout,rage,ragetime
+print("Kings health")
+print(250)
+print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
+print(Style.RESET_ALL,end="")
+
+global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol
 rage=0
+heal=0
 timeout=0.1
 timetick=time.time()
 #king=("_"*4),"{"+" K"+"}/",(" /\\")
 village=[list(" "*80) for i in range(45)]
-global walls
 walls={}
-global king_spawned
 king_spawned=0
-global active_spell
 active_spell=[]
-global barabarians
 barabarians=[]
-global symbol
 symbol=0
 
 
@@ -118,7 +114,7 @@ class Cannon(Buildings):
         self.health=350
         self.orig=200
         self.destroyed=0
-        self.damage=10
+        self.damage=5
         self.__clear=["     "]
         Buildings.add(self,self.x,self.y,self.__string)
     
@@ -144,8 +140,9 @@ class Cannon(Buildings):
                 flag=1
                 break
         if(flag==0 and king_spawned==1):
-            if(abs(k.x-self.x)+abs(k.y-self.y)<=10):
+            if(abs(k.x-self.x)+abs(k.y-self.y)<=10 and k.destroyed==0):
                 k.health-=self.damage
+                k.update_health()
         
             
             
@@ -201,14 +198,13 @@ class Troops:
     def low_color(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
-            print("\033["+str(posx)+";"+str(posy)+"H"+Back.RED+string[i],end="")
+            print("\033["+str(posx)+";"+str(posy)+"H"+Back.WHITE+string[i],end="")
             
     def mid_color(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
-            print("\033["+str(posx)+";"+str(posy)+"H"+Back.YELLOW+string[i],end="")
-            
-            
+            print("\033["+str(posx)+";"+str(posy)+"H"+Back.LIGHTBLUE_EX+string[i],end="")
+                    
     def destroy(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
@@ -222,11 +218,11 @@ class Troops:
         
 class Barbarian(Troops):
     def __init__(self,x,y):
-        self.health=50
+        self.health=70
         self.name="b"
         self.damage=6
         self.speed=1
-        self.orig=50
+        self.orig=70
         self.__width=1
         self.dead=0
         self.__height=1
@@ -270,9 +266,12 @@ class Barbarian(Troops):
    
 class King(Troops):
     def __init__(self,x,y):
-        self.health=200
+        self.health=250
         self.name="k"
-        self.orig=200
+        self.destroyed=0
+        self.orig=250
+        self.bar=48
+        self.number=47
         self.damage=50
         self.speed=1
         self.__string=["K"]
@@ -299,6 +298,14 @@ class King(Troops):
             target.destroyed=1
             if(target.health<=0):
                 target.clear()
+                
+    def update_health(self):
+        print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+" "*4,end="")
+        print("\033["+str(startx+48)+";"+str(0)+"H"+Style.RESET_ALL+" "*50,end="")
+        print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+str(max(0,self.health)),end="")
+        print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*int(self.health//5),end="") 
+        
+        
 class Spells:
     def __init__(self):
         self.time=5 
@@ -332,7 +339,19 @@ class Heal(Spells):
     def __init__(self):
         self.time=5
     def spell(self):
-        print("heal")
+        global timeout,barabarians,k,king_spawned
+        #print(barabarians[0].health)
+        for i in range(len(barabarians)):
+            if(barabarians[i].dead==0):
+                barabarians[i].health=min(barabarians[i].orig,1.5*barabarians[i].health)
+        #print(barabarians[0].health)
+        if(king_spawned==1):
+            if(k.destroyed==0):
+                k.health=min(k.orig,1.5*k.health)
+                
+        
+            
+        
         
         
     
@@ -340,7 +359,7 @@ class Get:
     def __call__(self):
         global king_spawned
         global timetick
-        global active_spell,rage,ragetime,rage_spell
+        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime
         global k
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -362,16 +381,16 @@ class Get:
                 k=King(2,5)
                 king_spawned=1
                 
-            if(ch=="a" and king_spawned==1):
+            if(ch=="a" and king_spawned==1 and k.destroyed==0):
                 k.move(0,-1)
                 k.movement=[0,-1]
-            if(ch=="w" and king_spawned==1):
+            if(ch=="w" and king_spawned==1 and k.destroyed==0):
                 k.move(-1,0);k.movement=[-1,0]
-            if(ch=="d" and king_spawned==1):
+            if(ch=="d" and king_spawned==1 and k.destroyed==0):
                 k.move(0,1);k.movement=[0,1]
-            if(ch=="s" and king_spawned==1):
+            if(ch=="s" and king_spawned==1 and k.destroyed==0):
                 k.move(1,0);k.movement=[1,0]
-            if(ch==" " and king_spawned==1):
+            if(ch==" " and king_spawned==1 and k.destroyed==0):
                 k.attack(k.movement[0],k.movement[1])                    
             if(ch=="j"):
                 if(rage==0):
@@ -380,8 +399,11 @@ class Get:
                     ragetime=time.time()
                     rage=1
             if(ch=="i"):
-                h=Heal()
-                h.spell()
+                if(heal==0):
+                    heal_spell=Heal()
+                    heal_spell.spell()
+                    healtime=time.time()
+                    heal=1
             if(ch=="e"):
                 return 1
             timetick=time.time()
@@ -487,7 +509,7 @@ position2=(45,20)
 position3=(40,70)
 
 def animate():
-    global rage
+    global rage,king_spawned,k
     for i in range(len(buildings)):
         if(buildings[i].health<(70/100)*buildings[i].orig and buildings[i].destroyed==0):
             buildings[i].mid_color()
@@ -495,11 +517,11 @@ def animate():
             buildings[i].low_color()
         if(buildings[i].health<=0 and buildings[i].destroyed==0):
             buildings[i].clear()
-    if(rage==1):
-        if(time.time()-ragetime>5):
-            rage=0
-            rage_spell.deactive()
-             
+    # if(rage==1):
+    #     if(time.time()-ragetime>10):
+    #         rage_spell.deactive()
+
+        
     for i in range(len(barabarians)):
         if(barabarians[i].dead==0):
             result=barabarians[i].nearest()
@@ -515,10 +537,18 @@ def animate():
         if(barabarians[i].health<=0 and barabarians[i].dead==0):
             barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear)
             barabarians[i].dead=1
+    if(king_spawned==1):
+        if(k.health<=0 and k.destroyed==0):
+            k.destroy(k.x,k.y,k.clear)
+            k.destroyed=1
+            
+        
             
     for i in range(len(cannons)):
         if(cannons[i].destroyed==0):
             c=cannons[i].attack()
+            
+    
 
 
 while(1):
