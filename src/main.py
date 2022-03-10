@@ -4,6 +4,7 @@ import sys
 import termios
 import tty
 import signal
+import os
 horizontal=("-"*80).center(90)
 vertical=(("|"+" "*80+"|").center(90)+"\n")*45
 print(horizontal)
@@ -48,12 +49,12 @@ class Buildings:
         
 
 class Hut(Buildings):
-    destroyed=0
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=2
         self.__height=2
         self.health=200
+        self.destroyed=0
         self.orig=200
         self.__string=[(" /\\ "),"[ H]"]
         self.__clear=[("    "),"    "]
@@ -80,6 +81,7 @@ class TownHall(Buildings):
         self.__width=6
         self.__height=5
         self.health=400
+        self.destroyed=0
         self.orig=400
         self.__string=[("+"+"-"*4+"+"),("|"+"TOWN"+"|"),("|"+"HALL"+"|"),(("|"+" "*4+"|")*1),("+"+"-"*4+"+")]
         self.__clear=[(" "+" "*4+" "),(" "+"    "+" "),(" "+"    "+" "),((" "+" "*4+" ")*1),(" "+" "*4+" ")]
@@ -108,6 +110,7 @@ class Cannon(Buildings):
         self.__string=["[<C>]"]
         self.health=200
         self.orig=200
+        self.destroyed=0
         self.__clear=["     "]
         Buildings.add(self,self.x,self.y,self.__string)
     
@@ -128,11 +131,12 @@ class Cannon(Buildings):
         
 
 class Wall(Buildings):
-    destroyed=0
+   
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=1
         self.__height=1
+        self.destroyed=0
         self.__string=["/"]
         self.health=120
         self.__clear=[" "]
@@ -158,7 +162,7 @@ class Troops:
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.BLUE+string[i],end="")
-            print(Style.RESET_ALL)
+            print(Style.RESET_ALL,end="")
             
     def move(self,x,y,string,clear,ind_i,ind_j):
         for i in range(len(string)):
@@ -167,8 +171,9 @@ class Troops:
         x+=ind_i;y+=ind_j
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
+            
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.BLUE+string[i],end="")
-            print(Style.RESET_ALL)
+            print(Style.RESET_ALL,end="")
     
             
             
@@ -198,7 +203,6 @@ class Barbarian(Troops):
         if(village[self.x+i][self.y+j]!="w"):
             building_index=mapping[village[self.x+i][self.y+j]]
             buildings[building_index].health-=self.__damage
-            return
         else:
             target=walls[str(self.x+i)+"_"+str(self.y+j)]
             target.health-=self.__damage
@@ -226,7 +230,7 @@ class King(Troops):
     def __init__(self,x,y):
         self.__health=100
         self.name="k"
-        self.__damage=30
+        self.__damage=50
         self.__string=["K"]
         self.x=x
         self.movement=[0,1]
@@ -238,12 +242,13 @@ class King(Troops):
         if(village[self.x+i][self.y+j]==" "):
             Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
             self.x+=i;self.y+=j
+   
     
     def attack(self,i,j):
         if(village[self.x+i][self.y+j]!="w" and village[self.x+i][self.y+j]!=" "):
             building_index=mapping[village[self.x+i][self.y+j]]
             buildings[building_index].health-=self.__damage
-            return
+            
         elif(village[self.x+i][self.y+j]=="w"):
             target=walls[str(self.x+i)+"_"+str(self.y+j)]
             target.health-=self.__damage
@@ -266,14 +271,13 @@ class Get:
         try:
             tty.setraw(sys.stdin.fileno())
             ch = sys.stdin.read(1)
-            
             print("\r",end="")
             if(ch=="z"):
-                print("")
+             
                 b=Barbarian(position1[0],position1[1])
                 barabarians.append(b)
             if(ch=="x"):
-                print("")
+                
                 b=Barbarian(position2[0],position2[1])
                 barabarians.append(b)
             if(ch=="c"):
@@ -312,7 +316,7 @@ def alarmHandler(signum, frame):
     raise AlarmException
 
 
-def input_to(callback,timeout=0.3):
+def input_to(callback,timeout=0.2):
     signal.signal(signal.SIGALRM, alarmHandler)
     signal.setitimer(signal.ITIMER_REAL, timeout)
     try:
@@ -383,7 +387,6 @@ endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
 for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
     w=Wall(endwall[0]+i,endwall[1])
     walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
-print("")
 
 
 
@@ -399,11 +402,11 @@ position3=(40,70)
 
 def animate():
     for i in range(len(buildings)):
-        if(buildings[i].health<(70/100)*buildings[i].orig):
+        if(buildings[i].health<(70/100)*buildings[i].orig and buildings[i].destroyed==0):
             buildings[i].mid_color()
-        if(buildings[i].health<=(30/100)*buildings[i].orig):
+        if(buildings[i].health<=(30/100)*buildings[i].orig and buildings[i].destroyed==0):
             buildings[i].low_color()
-        if(buildings[i].health<=0):
+        if(buildings[i].health<=0 and buildings[i].destroyed==0):
             buildings[i].clear()
     for i in range(len(barabarians)):
         result=barabarians[i].nearest()
@@ -417,10 +420,18 @@ def animate():
     
         
 while(1):
+    os.system("stty -echo")
     ans=input_to(getinput)
     if(ans==1):
+        os.system("stty echo")
         break
     animate()
+    print("",end="")
+    print("\r",end="")
+    time.sleep(0.2)
+    
+
+    
     
 
     
