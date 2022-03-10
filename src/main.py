@@ -29,6 +29,19 @@ class Buildings:
             posx=startx-1+x+i;posy=starty-1+y
             village[x+i][y:y+len(string[i])]=str(symbol)*len(string[i])
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.GREEN+string[i],end="")
+        
+    def low_color(self,x,y,string):
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            print("\033["+str(posx)+";"+str(posy)+"H"+Back.RED+string[i],end="")
+    
+    def mid_color(self,x,y,string):
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            print("\033["+str(posx)+";"+str(posy)+"H"+Back.YELLOW+string[i],end="")
+        
+        
+        
 
 class Hut(Buildings):
     destroyed=0
@@ -36,7 +49,8 @@ class Hut(Buildings):
         self.x=x;self.y=y
         self.__width=2
         self.__height=2
-        self.health=120
+        self.health=200
+        self.orig=200
         self.__string=[(" /\\ "),"[ H]"]
         self.__clear=[("    "),"    "]
         Buildings.add(self,self.x,self.y,self.__string)
@@ -48,6 +62,11 @@ class Hut(Buildings):
             village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
             print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
         self.destroyed=1
+    def low_color(self):
+        Buildings.low_color(self,self.x,self.y,self.__string)
+    
+    def mid_color(self):
+        Buildings.mid_color(self,self.x,self.y,self.__string)
 
 
 class TownHall(Buildings):
@@ -56,7 +75,8 @@ class TownHall(Buildings):
         self.x=x;self.y=y
         self.__width=6
         self.__height=5
-        self.health=200
+        self.health=400
+        self.orig=400
         self.__string=[("+"+"-"*4+"+"),("|"+"TOWN"+"|"),("|"+"HALL"+"|"),(("|"+" "*4+"|")*1),("+"+"-"*4+"+")]
         self.__clear=[(" "+" "*4+" "),(" "+"    "+" "),(" "+"    "+" "),((" "+" "*4+" ")*1),(" "+" "*4+" ")]
         Buildings.add(self,self.x,self.y,self.__string)
@@ -68,6 +88,12 @@ class TownHall(Buildings):
             village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
             print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
         self.destroyed=1
+    def low_color(self):
+        Buildings.low_color(self,self.x,self.y,self.__string)
+    
+    def mid_color(self):
+        Buildings.mid_color(self,self.x,self.y,self.__string)
+
 
 class Cannon(Buildings):
     destroyed=0
@@ -76,7 +102,8 @@ class Cannon(Buildings):
         self.__width=3
         self.__height=1
         self.__string=["[<C>]"]
-        self.health=120
+        self.health=200
+        self.orig=200
         self.__clear=["     "]
         Buildings.add(self,self.x,self.y,self.__string)
     
@@ -87,6 +114,12 @@ class Cannon(Buildings):
             village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
             print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
         self.destroyed=1
+    def low_color(self):
+        Buildings.low_color(self,self.x,self.y,self.__string)
+    
+    def mid_color(self):
+        Buildings.mid_color(self,self.x,self.y,self.__string)
+
         
         
 
@@ -97,7 +130,7 @@ class Wall(Buildings):
         self.__width=1
         self.__height=1
         self.__string=["/"]
-        self.health=60
+        self.health=120
         self.__clear=[" "]
         Buildings.add(self,self.x,self.y,self.__string)
     
@@ -108,6 +141,13 @@ class Wall(Buildings):
             village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
             print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
         self.destroyed=1
+    
+    def low_color(self):
+        Buildings.low_color(self,self.x,self.y,self.__string)
+    
+    def mid_color(self):
+        Buildings.mid_color(self,self.x,self.y,self.__string)
+
         
 class Troops:
     def addtroop(self,x,y,string):
@@ -153,10 +193,13 @@ class Barbarian(Troops):
         if(village[self.x+i][self.y+j]!="w"):
             building_index=mapping[village[self.x+i][self.y+j]]
             buildings[building_index].health-=self.__damage
+            return
         else:
             target=walls[str(self.x+i)+"_"+str(self.y+j)]
-            target.health=0
-            target.clear()
+            target.health-=self.__damage
+            target.destroyed=1
+            if(target.health<=0):
+                target.clear()
             
     
     def nearest(self):
@@ -303,6 +346,10 @@ position2=(5,50)
 
 def animate():
     for i in range(len(buildings)):
+        if(buildings[i].health<(70/100)*buildings[i].orig):
+            buildings[i].mid_color()
+        if(buildings[i].health<=(30/100)*buildings[i].orig):
+            buildings[i].low_color()
         if(buildings[i].health<=0):
             buildings[i].clear()
     for i in range(len(barabarians)):
@@ -312,6 +359,7 @@ def animate():
         movex=0 if(dirx==0) else (locx-barabarians[i].x)/abs(locx-barabarians[i].x)
         movey=0 if(diry==0) else (locy-barabarians[i].y)/abs(locy-barabarians[i].y)
         barabarians[i].move(int(movex),int(movey))
+
         
     
         
