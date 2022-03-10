@@ -12,8 +12,11 @@ print(horizontal)
 starty=6;prevx=starty
 startx=3;prevy=starty
 global village
+global mapping
 #king=("_"*4),"{"+" K"+"}/",(" /\\")
 village=[list(" "*80) for i in range(45)]
+global walls
+walls={}
 
 global barabarians
 barabarians=[]
@@ -28,41 +31,83 @@ class Buildings:
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.GREEN+string[i],end="")
 
 class Hut(Buildings):
+    destroyed=0
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=2
         self.__height=2
         self.health=120
         self.__string=[(" /\\ "),"[ H]"]
+        self.__clear=[("    "),"    "]
         Buildings.add(self,self.x,self.y,self.__string)
+    
+    def clear(self):
+        string=self.__clear;x=self.x;y=self.y
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+        self.destroyed=1
 
 
 class TownHall(Buildings):
+    destroyed=0
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=6
         self.__height=5
         self.health=200
         self.__string=[("+"+"-"*4+"+"),("|"+"TOWN"+"|"),("|"+"HALL"+"|"),(("|"+" "*4+"|")*1),("+"+"-"*4+"+")]
+        self.__clear=[(" "+" "*4+" "),(" "+"    "+" "),(" "+"    "+" "),((" "+" "*4+" ")*1),(" "+" "*4+" ")]
         Buildings.add(self,self.x,self.y,self.__string)
+    
+    def clear(self):
+        string=self.__clear;x=self.x;y=self.y
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+        self.destroyed=1
 
 class Cannon(Buildings):
+    destroyed=0
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=3
         self.__height=1
         self.__string=["[<C>]"]
         self.health=120
+        self.__clear=["     "]
         Buildings.add(self,self.x,self.y,self.__string)
+    
+    def clear(self):
+        string=self.__clear;x=self.x;y=self.y
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+        self.destroyed=1
+        
+        
 
 class Wall(Buildings):
+    destroyed=0
     def __init__(self,x,y):
         self.x=x;self.y=y
         self.__width=1
         self.__height=1
         self.__string=["/"]
         self.health=60
+        self.__clear=[" "]
         Buildings.add(self,self.x,self.y,self.__string)
+    
+    def clear(self):
+        string=self.__clear;x=self.x;y=self.y
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+        self.destroyed=1
         
 class Troops:
     def addtroop(self,x,y,string):
@@ -102,15 +147,23 @@ class Barbarian(Troops):
             Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
             self.x+=i;self.y+=j
         else:
-            print(village[self.x+i][self.y+j])
-               
+            self.attack(i,j)
+    
+    def attack(self,i,j):
+        if(village[self.x+i][self.y+j]!="w"):
+            building_index=mapping[village[self.x+i][self.y+j]]
+            buildings[building_index].health-=self.__damage
+        else:
+            target=walls[str(self.x+i)+"_"+str(self.y+j)]
+            target.health=0
+            target.clear()
             
     
     def nearest(self):
         dis=float("inf")
         ind=0
         for i in range(len(buildings)):
-            if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<dis):
+            if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<dis and buildings[i].destroyed==0):
                 dis=abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)
                 ind=i
         return ind
@@ -136,10 +189,7 @@ class King(Troops):
     
     
 class Get:
-    """Class to get input."""
-
     def __call__(self):
-        """Defining __call__."""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -160,17 +210,14 @@ class Get:
 
 
 class AlarmException(Exception):
-    """Handling alarm exception."""
     pass
 
 
 def alarmHandler(signum, frame):
-    """Handling timeouts."""
     raise AlarmException
 
 
 def input_to(callback,timeout=0.3):
-    """Taking input from user."""
     signal.signal(signal.SIGALRM, alarmHandler)
     signal.setitimer(signal.ITIMER_REAL, timeout)
     try:
@@ -207,38 +254,46 @@ buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,h9,cannon1,cannon2,cannon3,cannon4,cannon5
 
 
 thpos=(21,38)
+symbol="w"
 wall1_attrib=(20,15)
 wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
 for i in range(wall1_attrib[0]):
-    Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+    w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+    walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
 for i in range(wall1_attrib[1]):
-    Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+    w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+    walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
 for i  in range(wall1_attrib[0]+2):
-    Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+    w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+    walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
 for i in range(wall1_attrib[1]-2):
-    Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+    w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+    walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
 
 
 wall2_attrib=(20,15)
 wall2="/"*wall2_attrib[0]
 wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
 for i in range(wall2_attrib[0]):
-    Wall(wall2_start[0],wall2_start[1]+i)
+    w=Wall(wall2_start[0],wall2_start[1]+i)
+    walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
 for i in range(wall2_attrib[1]+8):
-    Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+    w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+    walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
 end =i    
 for i in range(wall2_attrib[0]*2):
-    Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+    w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+    walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
 endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
 for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
-    Wall(endwall[0]+i,endwall[1])
+    w=Wall(endwall[0]+i,endwall[1])
+    walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
 print("")
 
 
 
 
 #-----------------------------------------------Main Code------------------------------------
-#"\033["+str(posx)+";"+str(posy)+"H"+string[i],end=""
 def getinput():
     a=Get()
     ans=a.__call__()
@@ -247,13 +302,16 @@ position1=(38,18)
 position2=(5,50)
 
 def animate():
+    for i in range(len(buildings)):
+        if(buildings[i].health<=0):
+            buildings[i].clear()
     for i in range(len(barabarians)):
         result=barabarians[i].nearest()
         locx=buildings[result].x;locy=buildings[result].y
         dirx=(locx-barabarians[i].x);diry=(locy-barabarians[i].y)
         movex=0 if(dirx==0) else (locx-barabarians[i].x)/abs(locx-barabarians[i].x)
         movey=0 if(diry==0) else (locy-barabarians[i].y)/abs(locy-barabarians[i].y)
-        barabarians[i].move(0,-1)
+        barabarians[i].move(int(movex),int(movey))
         
     
         
