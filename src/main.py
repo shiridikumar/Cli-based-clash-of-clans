@@ -13,10 +13,15 @@ starty=6;prevx=starty
 startx=3;prevy=starty
 global village
 global mapping
+global k
+global timetick
+timetick=time.time()
 #king=("_"*4),"{"+" K"+"}/",(" /\\")
 village=[list(" "*80) for i in range(45)]
 global walls
 walls={}
+global king_spawned
+king_spawned=0
 
 global barabarians
 barabarians=[]
@@ -34,7 +39,6 @@ class Buildings:
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.RED+string[i],end="")
-    
     def mid_color(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
@@ -159,7 +163,7 @@ class Troops:
     def move(self,x,y,string,clear,ind_i,ind_j):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
-            print("\033["+str(posx)+";"+str(posy)+"H"+clear[i],end="")
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+clear[i],end="")
         x+=ind_i;y+=ind_j
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
@@ -173,6 +177,7 @@ class Troops:
 class Barbarian(Troops):
     def __init__(self,x,y):
         self.__health=30
+        self.name="b"
         self.__damage=6
         self.__width=1
         self.__height=1
@@ -200,6 +205,7 @@ class Barbarian(Troops):
             target.destroyed=1
             if(target.health<=0):
                 target.clear()
+                
             
     
     def nearest(self):
@@ -219,37 +225,83 @@ class Barbarian(Troops):
 class King(Troops):
     def __init__(self,x,y):
         self.__health=100
-        self.__damage=12
+        self.name="k"
+        self.__damage=30
         self.__string=["K"]
         self.x=x
+        self.movement=[0,1]
         self.y=y
         self.clear=[" "]
         Troops.addtroop(self,self.x,self.y,self.__string)
     
     def move(self,i,j):
-        self.x+=i;self.y+=j
-        Troops.move(self,self.x,self.y,i,j)
+        if(village[self.x+i][self.y+j]==" "):
+            Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
+            self.x+=i;self.y+=j
+    
+    def attack(self,i,j):
+        if(village[self.x+i][self.y+j]!="w" and village[self.x+i][self.y+j]!=" "):
+            building_index=mapping[village[self.x+i][self.y+j]]
+            buildings[building_index].health-=self.__damage
+            return
+        elif(village[self.x+i][self.y+j]=="w"):
+            target=walls[str(self.x+i)+"_"+str(self.y+j)]
+            target.health-=self.__damage
+            target.destroyed=1
+            if(target.health<=0):
+                target.clear()
+        
+        
+            
     
     
 class Get:
     def __call__(self):
+        global king_spawned
+        global timetick
+        global k
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
+       
         try:
             tty.setraw(sys.stdin.fileno())
             ch = sys.stdin.read(1)
-            if(ch=="w"):
+            
+            print("\r",end="")
+            if(ch=="z"):
                 print("")
                 b=Barbarian(position1[0],position1[1])
                 barabarians.append(b)
-            if(ch=="a"):
+            if(ch=="x"):
                 print("")
-                King(5,50)
+                b=Barbarian(position2[0],position2[1])
+                barabarians.append(b)
+            if(ch=="c"):
+                b=Barbarian(position3[0],position3[1])
+                barabarians.append(b)
+            if(ch=="k" and king_spawned==0):
+                k=King(2,5)
+                king_spawned=1
+                
+            if(ch=="a" and king_spawned==1):
+                k.move(0,-1)
+                k.movement=[0,-1]
+            if(ch=="w" and king_spawned==1):
+                k.move(-1,0);k.movement=[-1,0]
+            if(ch=="d" and king_spawned==1):
+                k.move(0,1);k.movement=[0,1]
+            if(ch=="s" and king_spawned==1):
+                k.move(1,0);k.movement=[1,0]
+            if(ch==" " and king_spawned==1):
+                k.attack(k.movement[0],k.movement[1])                    
             if(ch=="e"):
                 return 1
+            timetick=time.time()
+            
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
+      
 
 
 class AlarmException(Exception):
@@ -341,8 +393,9 @@ def getinput():
     a=Get()
     ans=a.__call__()
     return ans
-position1=(38,18)
-position2=(5,50)
+position1=(2,35)
+position2=(45,20)
+position3=(40,70)
 
 def animate():
     for i in range(len(buildings)):
@@ -367,7 +420,6 @@ while(1):
     ans=input_to(getinput)
     if(ans==1):
         break
-    print("\r",end="")
     animate()
     
 
