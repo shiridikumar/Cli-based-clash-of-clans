@@ -122,6 +122,7 @@ class Cannon(Buildings):
         self.destroyed=0
         self.damage=5
         self.__clear=["     "]
+        self.__lastshot=0
         Buildings.add(self,self.x,self.y,self.__string)
     
     def clear(self):
@@ -140,16 +141,18 @@ class Cannon(Buildings):
     def attack(self):
         global barabarians,k,king_spawned
         flag=0
-        for i in range(len(barabarians)):
-            if(abs(barabarians[i].x-self.x)+abs(barabarians[i].y-self.y)<=10 and barabarians[i].dead==0):
-                barabarians[i].health-=self.damage
-                flag=1
-                break
-        if(flag==0 and king_spawned==1):
-            if(abs(k.x-self.x)+abs(k.y-self.y)<=10 and k.destroyed==0):
-                k.health-=self.damage
-                k.update_health()
-        
+        if(time.time()-self.__lastshot>0.2):
+            for i in range(len(barabarians)):
+                if(abs(barabarians[i].x-self.x)+abs(barabarians[i].y-self.y)<=10 and barabarians[i].dead==0):
+                    barabarians[i].health-=self.damage
+                    flag=1
+                    break
+            if(flag==0 and king_spawned==1):
+                if(abs(k.x-self.x)+abs(k.y-self.y)<=10 and k.destroyed==0):
+                    k.health-=self.damage
+                    k.update_health()
+            self.__lastshot=time.time()
+            
             
             
         
@@ -409,7 +412,15 @@ class Get:
                 capture.append([time.time()-starttick,"s"])
                  
             if(ch==" " and king_spawned==1 and k.destroyed==0):
-                k.attack(k.movement[0],k.movement[1])                    
+                k.attack(0,1)
+                k.attack(0,-1)
+                k.attack(1,0)
+                k.attack(-1,0)
+                k.attack(1,1)
+                k.attack(-1,-1)
+                k.attack(1,-1)
+                k.attack(-1,1)
+                
                 capture.append([time.time()-starttick," "])
                 
             if(ch=="j"):
@@ -446,7 +457,7 @@ def alarmHandler(signum, frame):
     raise AlarmException
 
 
-def input_to(callback,timeout=0.2):
+def input_to(callback,timeout=0):
     signal.signal(signal.SIGALRM, alarmHandler)
     signal.setitimer(signal.ITIMER_REAL, timeout)
     try:
@@ -552,16 +563,19 @@ def check_end_game():
             kflag=0
         else:
             kflag=1
-    if((kflag==0 & bflag==0) or buildflag==0):
-        return True
+    if(kflag==0 and bflag==0):
+        return (True,"You Lose")
+    elif(buildflag==0):
+        return (True,"You Won")
+    
     else:
-        return False
+        return (False,"")
         
 def animate():
     global rage,king_spawned,k
     res=check_end_game()
-    if(res):
-        return 1
+    if(res[0]):
+        return res
     for i in range(len(buildings)):
         if(buildings[i].health<(70/100)*buildings[i].orig and buildings[i].destroyed==0):
             buildings[i].mid_color()
@@ -597,7 +611,7 @@ def animate():
     for i in range(len(cannons)):
         if(cannons[i].destroyed==0):
             c=cannons[i].attack()
-    return 0
+    return (False,"")
             
     
 
@@ -609,7 +623,8 @@ while(1):
         os.system("stty echo")
         break
     game=animate()
-    if(game==1):
+    if(game[0]==1):
+        print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
         os.system("stty echo")
         break
     
