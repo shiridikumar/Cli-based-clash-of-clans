@@ -4,7 +4,27 @@ import sys
 import termios
 import tty
 import signal
-import os
+import os  
+total=open("./src/total.txt","r")
+totalreplays=0
+for i in total.readlines():
+    totalreplays=int(i)
+print("Available replays")
+total.close()
+
+for i in range(totalreplays):
+    print("{} : Replay game {} ".format(i+1,i+1))
+replayed=0
+while(replayed!=1):
+    replay=int(input("Enter a file number : "))
+    if(replay in range(1,totalreplays+1)):
+        f=open("./replays/replay{}.txt".format(replay),"r+")
+        replayed=0
+        break
+    else:
+        print("Enter a valid file option")
+        
+print("\033["+str(1)+";"+str(0)+"H"+"")
 horizontal=("-"*80).center(90)
 vertical=(("|"+" "*80+"|").center(90)+"\n")*45
 print(horizontal)
@@ -16,7 +36,9 @@ print("Kings health")
 print(250)
 print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
 print(Style.RESET_ALL,end="")
-
+global capture,starttick,curr_frame
+curr_frame=0
+capture=[]
 global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol
 rage=0
 heal=0
@@ -30,6 +52,12 @@ active_spell=[]
 barabarians=[]
 symbol=0
 
+a=0
+global frames
+for i in f.readlines():
+    a=i
+frames=eval(a)
+f.close()
 
 class Buildings:
     def add(self,x,y,string):
@@ -359,52 +387,70 @@ class Get:
     def __call__(self):
         global king_spawned
         global timetick
-        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime
-        global k
+        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick
+        global k,curr_frame,frames
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
        
         try:
             tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
+            ch =frames[curr_frame][1]
             print("\r",end="")
             if(ch=="z"):
                 b=Barbarian(position1[0],position1[1])
                 barabarians.append(b)
+                #capture.append([time.time()-starttick,"z"])
             if(ch=="x"):
                 b=Barbarian(position2[0],position2[1])
                 barabarians.append(b)
+                #capture.append([time.time()-starttick,"x"])
             if(ch=="c"):
                 b=Barbarian(position3[0],position3[1])
                 barabarians.append(b)
+                #capture.append([time.time()-starttick,"c"])
             if(ch=="k" and king_spawned==0):
                 k=King(2,5)
                 king_spawned=1
+                #capture.append([time.time()-starttick,"k"])
                 
             if(ch=="a" and king_spawned==1 and k.destroyed==0):
                 k.move(0,-1)
                 k.movement=[0,-1]
+                #capture.append([time.time()-starttick,"a"])
+                
             if(ch=="w" and king_spawned==1 and k.destroyed==0):
                 k.move(-1,0);k.movement=[-1,0]
+                #capture.append([time.time()-starttick,"w"])
+                
             if(ch=="d" and king_spawned==1 and k.destroyed==0):
                 k.move(0,1);k.movement=[0,1]
+                #capture.append([time.time()-starttick,"d"])
+                 
             if(ch=="s" and king_spawned==1 and k.destroyed==0):
                 k.move(1,0);k.movement=[1,0]
+                #capture.append([time.time()-starttick,"s"])
+                 
             if(ch==" " and king_spawned==1 and k.destroyed==0):
                 k.attack(k.movement[0],k.movement[1])                    
+                #capture.append([time.time()-starttick," "])
+                
             if(ch=="j"):
                 if(rage==0):
                     rage_spell=Rage()
                     rage_spell.spell(4)
                     ragetime=time.time()
                     rage=1
+                    #capture.append([time.time()-starttick,"j"])
+                    
             if(ch=="i"):
                 if(heal==0):
                     heal_spell=Heal()
                     heal_spell.spell()
                     healtime=time.time()
                     heal=1
+                    #capture.append([time.time()-starttick,"i"])
             if(ch=="e"):
+                capture.append([time.time()-starttick,"e"])
                 return 1
             timetick=time.time()
             
@@ -498,7 +544,7 @@ for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
 
 
 
-
+starttick=time.time()
 #-----------------------------------------------Main Code------------------------------------
 def getinput():
     a=Get()
@@ -552,19 +598,18 @@ def animate():
 
 
 while(1):
-    os.system("stty -echo")
-    ans=input_to(getinput,timeout)
-    if(ans==1):
-        os.system("stty echo")
-        break
+    os.system("stty echo")
+    if(time.time()-starttick>frames[curr_frame][0]):
+        ans=getinput()
+        curr_frame+=1
+        if(ans==1):
+            break
     animate()
+    time.sleep(timeout)
     
     print("",end="")
     print("\r",end="")
-    time.sleep(timeout)
-    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
     
-
     
     
 
