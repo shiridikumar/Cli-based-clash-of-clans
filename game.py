@@ -23,7 +23,7 @@ print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
 print(Style.RESET_ALL,end="")
 global capture,starttick
 capture=[]
-global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol
+global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol,archers
 rage=0
 heal=0
 timeout=0.1
@@ -35,7 +35,7 @@ king_spawned=0
 active_spell=[]
 barabarians=[]
 symbol=0
-
+archers=[]
 
 class Buildings:
     def add(self,x,y,string):
@@ -140,7 +140,7 @@ class Cannon(Buildings):
     
     def attack(self):
         global barabarians,k,king_spawned
-        flag=0
+        flag=0;flag1=0
         if(time.time()-self.__lastshot>0.2):
             for i in range(len(barabarians)):
                 if(abs(barabarians[i].x-self.x)+abs(barabarians[i].y-self.y)<=10 and barabarians[i].dead==0):
@@ -150,7 +150,16 @@ class Cannon(Buildings):
             if(flag==0 and king_spawned==1):
                 if(abs(k.x-self.x)+abs(k.y-self.y)<=10 and k.destroyed==0):
                     k.health-=self.damage
+                    flag1=1
                     k.update_health()
+            if(flag==0 and flag1==0):
+                for i in range(len(archers)):
+                    if(abs(archers[i].x-self.x)+abs(archers[i].y-self.y)<=10 and archers[i].dead==0):
+                        archers[i].health-=self.damage
+                        flag=1
+                        break
+            
+                    
             self.__lastshot=time.time()
             
             
@@ -227,11 +236,11 @@ class Troops:
         
 class Barbarian(Troops):
     def __init__(self,x,y):
-        self.health=70
+        self.health=50
         self.name="b"
         self.damage=6
         self.speed=1
-        self.orig=70
+        self.orig=50
         self.__width=1
         self.dead=0
         self.__height=1
@@ -271,6 +280,73 @@ class Barbarian(Troops):
 
     def get_string(self):
         return self.__string
+    
+class Archer(Troops):
+    def __init__(self,x,y):
+        self.health=25
+        self.name="A"
+        self.damage=3
+        self.speed=2
+        self.range=10
+        self.orig=25
+        self.__width=1
+        self.__lastshot=0
+        self.dead=0
+        self.__height=1
+        self.__string=["A"]
+        self.x=x
+        self.y=y
+        self.clear=[" "]
+        Troops.addtroop(self,self.x,self.y,self.__string)
+        
+    def move(self,i,j):
+        ret=self.attack(i,j)
+        if(ret==0):
+            if(village[self.x+i][self.y+j]=="w"):
+                target=walls[str(self.x+i)+"_"+str(self.y+j)]
+                target.health-=self.damage
+                target.destroyed=1
+                if(target.health<=0):
+                    target.clear()
+            else:
+                Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
+                self.x+=i;self.y+=j
+            
+    def attack(self,i,j):
+       
+        for i in range(len(buildings)):
+            if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<=10 and buildings[i].destroyed==0):
+                if(time.time()-self.__lastshot>0.2):
+                    buildings[i].health-=self.damage
+                    self.__lastshot=time.time()
+                flag=1
+                return 1
+                break
+        return 0
+        
+            
+        # if(village[self.x+i][self.y+j]!="w"):
+        #     building_index=mapping[village[self.x+i][self.y+j]]
+        #     buildings[building_index].health-=self.damage
+        # else:
+        #     target=walls[str(self.x+i)+"_"+str(self.y+j)]
+        #     target.health-=self.damage
+        #     target.destroyed=1
+        #     if(target.health<=0):
+        #         target.clear()
+    def nearest(self):
+        dis=float("inf")
+        ind=0
+        for i in range(len(buildings)):
+            if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<dis and buildings[i].destroyed==0):
+                dis=abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)
+                ind=i
+        return ind
+    
+
+    def get_string(self):
+        return self.__string
+    
         
    
 class King(Troops):
@@ -360,15 +436,12 @@ class Heal(Spells):
                 
         
             
-        
-        
-        
-    
+  
 class Get:
     def __call__(self):
         global king_spawned
         global timetick
-        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick
+        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick,archers
         global k
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -393,7 +466,23 @@ class Get:
                 k=King(2,5)
                 king_spawned=1
                 capture.append([time.time()-starttick,"k"])
+            
+            if(ch=="b" and king_spawned==0):
+                a=Archer(position1[0],position1[1])
+                archers.append(a)
+                capture.append([time.time()-starttick,"b"])
                 
+            if(ch=="n" and king_spawned==0):
+                a=Archer(position2[0],position2[1])
+                archers.append(a)
+                capture.append([time.time()-starttick,"n"])
+            
+            if(ch=="m" and king_spawned==0):
+                a=Archer(position3[0],position3[1])
+                archers.append(a)
+                capture.append([time.time()-starttick,"m"])
+            
+         
             if(ch=="a" and king_spawned==1 and k.destroyed==0):
                 k.move(0,-1)
                 k.movement=[0,-1]
@@ -603,6 +692,26 @@ def animate():
         if(barabarians[i].health<=0 and barabarians[i].dead==0):
             barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear)
             barabarians[i].dead=1
+            
+        
+    for i in range(len(archers)):
+        if(archers[i].dead==0):
+            for j in range(archers[i].speed):
+                result=archers[i].nearest()
+                locx=buildings[result].x;locy=buildings[result].y
+                dirx=(locx-archers[i].x);diry=(locy-archers[i].y)
+                movex=0 if(dirx==0) else (locx-archers[i].x)/abs(locx-archers[i].x)
+                movey=0 if(diry==0) else (locy-archers[i].y)/abs(locy-archers[i].y)
+                archers[i].move(int(movex),int(movey))
+            
+        if(archers[i].health<=(70/100)*archers[i].orig and archers[i].dead==0):
+            archers[i].mid_color(archers[i].x,archers[i].y,archers[i].get_string())
+        if(archers[i].health<=(30/100)*archers[i].orig and archers[i].dead==0):
+            archers[i].low_color(archers[i].x,archers[i].y,archers[i].get_string())
+        if(archers[i].health<=0 and archers[i].dead==0):
+            archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
+            archers[i].dead=1
+            
     if(king_spawned==1):
         if(k.health<=0 and k.destroyed==0):
             k.destroy(k.x,k.y,k.clear)
