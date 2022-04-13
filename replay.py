@@ -11,10 +11,12 @@ for i in total.readlines():
     totalreplays=int(i)
 print("Available replays")
 total.close()
-
+global curr_frame
+curr_frame=0
 for i in range(totalreplays):
     print("{} : Replay game {} ".format(i+1,i+1))
 replayed=0
+
 while(replayed!=1):
     replay=int(input("Enter a file number : "))
     if(replay in range(1,totalreplays+1)):
@@ -23,8 +25,29 @@ while(replayed!=1):
         break
     else:
         print("Enter a valid file option")
-        
-print("\033["+str(1)+";"+str(0)+"H"+"")
+col=[]
+global capture,starttick
+capture=[]
+starttick=time.time()
+global frames
+for i in f.readlines():
+    col.append(i)
+global inpu_arr
+inpu_arr=eval(col[1])
+a=col[0]
+frames=eval(a)
+f.close()
+
+valid=False
+while(not(valid)):
+    char_inp=inpu_arr[0]
+    if(char_inp!="k" and char_inp!="q"):
+        print("Invalid Response\n")
+        valid=False
+    else:
+        valid=True
+
+print("\033["+str(1)+";"+str(0)+"H"+"")  
 horizontal=("-"*80).center(90)
 vertical=(("|"+" "*80+"|").center(90)+"\n")*45
 print(horizontal)
@@ -32,16 +55,21 @@ print(vertical,end="")
 print(horizontal)
 starty=6;prevx=starty
 startx=3;prevy=starty
-print("Kings health")
+if(char_inp=="k"):
+    print("Kings health")
+else:
+    print("Queens health")
+    
 print(250)
 print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
 print(Style.RESET_ALL,end="")
-global capture,starttick,curr_frame
-curr_frame=0
-capture=[]
-global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol
+
+
+global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol,archers,ballons,max_archers,max_ballons,max_barabarians
+max_archers=30;max_barabarians=30;max_ballons=15
 rage=0
 heal=0
+ballons=[]
 timeout=0.1
 timetick=time.time()
 #king=("_"*4),"{"+" K"+"}/",(" /\\")
@@ -51,29 +79,29 @@ king_spawned=0
 active_spell=[]
 barabarians=[]
 symbol=0
+archers=[]
 
-a=0
-global frames
-for i in f.readlines():
-    a=i
-frames=eval(a)
-f.close()
+
 
 class Buildings:
-    def add(self,x,y,string):
+    def add(self,x,y,string,vil=0):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
-            village[x+i][y:y+len(string[i])]=str(symbol)*len(string[i])
+            if(vil==0):
+                village[x+i][y:y+len(string[i])]=str(symbol)*len(string[i])
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.GREEN+string[i],end="")
         
     def low_color(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.RED+string[i],end="")
+            
     def mid_color(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
             print("\033["+str(posx)+";"+str(posy)+"H"+Back.YELLOW+string[i],end="")
+    
+    
         
         
         
@@ -83,7 +111,7 @@ class Hut(Buildings):
         self.x=x;self.y=y
         self.__width=2
         self.__height=2
-        self.health=350
+        self.health=200
         self.destroyed=0
         self.orig=200
         self.__string=[(" /\\ "),"[ H]"]
@@ -102,6 +130,9 @@ class Hut(Buildings):
     
     def mid_color(self):
         Buildings.mid_color(self,self.x,self.y,self.__string)
+    
+    def get_string(self):
+        return self.__string
 
 
 class TownHall(Buildings):
@@ -112,7 +143,7 @@ class TownHall(Buildings):
         self.__height=5
         self.health=500
         self.destroyed=0
-        self.orig=400
+        self.orig=500
         self.__string=[("+"+"-"*4+"+"),("|"+"TOWN"+"|"),("|"+"HALL"+"|"),(("|"+" "*4+"|")*1),("+"+"-"*4+"+")]
         self.__clear=[(" "+" "*4+" "),(" "+"    "+" "),(" "+"    "+" "),((" "+" "*4+" ")*1),(" "+" "*4+" ")]
         Buildings.add(self,self.x,self.y,self.__string)
@@ -129,6 +160,9 @@ class TownHall(Buildings):
     
     def mid_color(self):
         Buildings.mid_color(self,self.x,self.y,self.__string)
+    
+    def get_string(self):
+        return self.__string
 
 
 class Cannon(Buildings):
@@ -140,7 +174,7 @@ class Cannon(Buildings):
         self.__height=1
         self.__string=["[<C>]"]
         self.health=350
-        self.orig=200
+        self.orig=350
         self.destroyed=0
         self.damage=5
         self.__clear=["     "]
@@ -160,9 +194,13 @@ class Cannon(Buildings):
     def mid_color(self):
         Buildings.mid_color(self,self.x,self.y,self.__string)
     
+    
+    def get_string(self):
+        return self.__string
+    
     def attack(self):
         global barabarians,k,king_spawned
-        flag=0
+        flag=0;flag1=0
         if(time.time()-self.__lastshot>0.2):
             for i in range(len(barabarians)):
                 if(abs(barabarians[i].x-self.x)+abs(barabarians[i].y-self.y)<=10 and barabarians[i].dead==0):
@@ -172,10 +210,102 @@ class Cannon(Buildings):
             if(flag==0 and king_spawned==1):
                 if(abs(k.x-self.x)+abs(k.y-self.y)<=10 and k.destroyed==0):
                     k.health-=self.damage
+                    flag1=1
                     k.update_health()
-            self.__lastshot=time.time()
-        
+            if(flag==0 and flag1==0):
+                for i in range(len(archers)):
+                    if(abs(archers[i].x-self.x)+abs(archers[i].y-self.y)<=10 and archers[i].dead==0):
+                        archers[i].health-=self.damage
+                        flag=1
+                        break
             
+                    
+            self.__lastshot=time.time()
+            
+class Wizard(Buildings):
+    destroyed=0
+    def __init__(self,x,y):
+        self.x=x;self.y=y
+        self.__width=3
+        self.range=10
+        self.__height=1
+        self.__string=["[<W>]"]
+        self.health=350
+        self.orig=350
+        self.destroyed=0
+        self.damage=5
+        self.__clear=["     "]
+        self.__lastshot=0
+        Buildings.add(self,self.x,self.y,self.__string)
+    
+    def clear(self):
+        string=self.__clear;x=self.x;y=self.y
+        for i in range(len(string)):
+            posx=startx-1+x+i;posy=starty-1+y
+            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+        self.destroyed=1
+    def low_color(self):
+        Buildings.low_color(self,self.x,self.y,self.__string)
+    
+    def mid_color(self):
+        Buildings.mid_color(self,self.x,self.y,self.__string)
+    
+    
+    def get_string(self):
+        return self.__string
+    
+    def attack(self):
+        global barabarians,k,king_spawned
+        flag=0;flag1=0;flag2=0
+        aoe_x=-1;aoe_y=-1
+        if(time.time()-self.__lastshot>0.2):
+            for i in range(len(ballons)):
+                if(abs(ballons[i].x-self.x)+abs(ballons[i].y-self.y)<=10 and ballons[i].dead==0):
+                    flag2=1
+                    aoe_x=ballons[i].x;aoe_y=ballons[i].y
+                    break
+            if(flag2==0):
+                for i in range(len(barabarians)):
+                    if(abs(barabarians[i].x-self.x)+abs(barabarians[i].y-self.y)<=10 and barabarians[i].dead==0):
+                        aoe_x=barabarians[i].x;aoe_y=barabarians[i].y
+                        flag=1
+                        break
+            if(flag==0 and king_spawned==1 and flag2==0):
+                if(abs(k.x-self.x)+abs(k.y-self.y)<=10 and k.destroyed==0):
+                    flag1=1
+                    aoe_x=k.x;aoe_y=k.y
+                    k.update_health()
+            if(flag==0 and flag1==0 and flag2==0):
+                for i in range(len(archers)):
+                    if(abs(archers[i].x-self.x)+abs(archers[i].y-self.y)<=10 and archers[i].dead==0):
+                        aoe_x=archers[i].x;aoe_y=archers[i].y
+                        flag=1
+                        break
+            
+            if(aoe_x!=-1):
+                flag=0;flag1=0;flag2=0
+                for i in range(len(ballons)):
+                    if(abs(ballons[i].x-aoe_x)+abs(ballons[i].y-aoe_y)<=3 and ballons[i].dead==0):
+                        ballons[i].health-=self.damage
+
+                for i in range(len(barabarians)):
+                    if(abs(barabarians[i].x-aoe_x)+abs(barabarians[i].y-aoe_y)<=3 and barabarians[i].dead==0):
+                        barabarians[i].health-=self.damage
+                        
+                if(king_spawned==1):
+                    if(abs(k.x-aoe_x)+abs(k.y-aoe_y)<=3 and k.destroyed==0):
+                        flag1=1
+                        k.health-=self.damage
+                        k.update_health()
+                
+                for i in range(len(archers)):
+                    if(abs(archers[i].x-aoe_x)+abs(archers[i].y-aoe_y)<=3 and archers[i].dead==0):
+                        archers[i].health-=self.damage
+                               
+            self.__lastshot=time.time()
+                
+           
             
         
         
@@ -206,7 +336,9 @@ class Wall(Buildings):
     
     def mid_color(self):
         Buildings.mid_color(self,self.x,self.y,self.__string)
-
+        
+    def get_string(self):
+        return self.__string
         
 class Troops:
     def addtroop(self,x,y,string):
@@ -249,11 +381,11 @@ class Troops:
         
 class Barbarian(Troops):
     def __init__(self,x,y):
-        self.health=70
+        self.health=50
         self.name="b"
         self.damage=6
         self.speed=1
-        self.orig=70
+        self.orig=50
         self.__width=1
         self.dead=0
         self.__height=1
@@ -293,6 +425,167 @@ class Barbarian(Troops):
 
     def get_string(self):
         return self.__string
+    
+class Archer(Troops):
+    def __init__(self,x,y):
+        self.health=25
+        self.name="A"
+        self.damage=3
+        self.speed=2
+        self.range=6
+        self.orig=25
+        self.__width=1
+        self.__lastshot=0
+        self.dead=0
+        self.__height=1
+        self.__string=["A"]
+        self.x=x
+        self.y=y
+        self.clear=[" "]
+        Troops.addtroop(self,self.x,self.y,self.__string)
+        
+    def move(self,i,j):
+        ret=self.attack(i,j)
+        if(ret==0):
+            if(village[self.x+i][self.y+j]=="w"):
+                target=walls[str(self.x+i)+"_"+str(self.y+j)]
+                target.health-=self.damage
+                target.destroyed=1
+                if(target.health<=0):
+                    target.clear()
+            else:
+                Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
+                self.x+=i;self.y+=j
+            
+    def attack(self,i,j):
+       
+        for i in range(len(buildings)):
+            if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<=self.range and buildings[i].destroyed==0):
+                if(time.time()-self.__lastshot>0.2):
+                    buildings[i].health-=self.damage
+                    self.__lastshot=time.time()
+                flag=1
+                return 1
+                break
+        return 0
+
+    def nearest(self):
+        dis=float("inf")
+        ind=0
+        for i in range(len(buildings)):
+            if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<dis and buildings[i].destroyed==0):
+                dis=abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)
+                ind=i
+        return ind
+    
+
+    def get_string(self):
+        return self.__string
+    
+
+class Ballon(Troops):
+    def __init__(self,x,y):
+        self.health=50
+        self.name="^"
+        self.damage=12
+        self.speed=2
+        self.range=10
+        self.orig=50
+        self.__width=1
+        self.__lastshot=0
+        self.__prev=" "
+        self.dead=0
+        self.__height=1
+        self.__string=["^"]
+        self.x=x
+        self.y=y
+        self.clear=[" "]
+        Troops.addtroop(self,self.x,self.y,self.__string)
+        
+        
+    def move(self,i,j):
+        ret=self.attack(i,j)
+        if(ret==0):
+            Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
+            if(self.__prev!=" " and self.__prev!="w"):
+                building_index=mapping[self.__prev]
+                building=buildings[building_index]
+                if(building.destroyed==0):
+                    building.add(building.x,building.y,building.get_string(),1)
+            if(self.__prev=="w"):
+                string=["/"]
+                x=self.x;y=self.y
+                posx=startx-1+x;posy=starty-1+y
+                print("\033["+str(posx)+";"+str(posy)+"H"+Back.GREEN+string[0],end="")
+                print(Style.RESET_ALL,end="")
+            
+            self.x+=i;self.y+=j
+        else:
+            Troops.move(self,self.x,self.y,self.__string,self.clear,0,0)
+        self.__prev=village[self.x][self.y]
+            
+    def attack(self,i,j):
+        flag=0
+        for i in range(len(defenses)):
+            if(abs(defenses[i].x-self.x)+abs(defenses[i].y-self.y)==0 and defenses[i].destroyed==0):
+                if(time.time()-self.__lastshot>0.2):
+                    defenses[i].health-=self.damage
+                    self.__lastshot=time.time()
+                flag=1
+                return 1
+        for i in range(len(defenses)):
+            if(defenses[i].destroyed==0):
+                flag=1
+                break
+        else:
+            flag=0
+                
+        if(flag==0):
+            dis=float("inf")
+            for i in range(len(buildings)):
+                if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)==0 and buildings[i].destroyed==0):
+                    if(time.time()-self.__lastshot>0.2):
+                        buildings[i].health-=self.damage
+                        self.__lastshot=time.time()
+                    flag=1
+                    return 1
+        return 0
+
+    def nearest(self):
+        dis=float("inf")
+        ind=0
+        flag=0
+        for i in range(len(defenses)):
+            if(abs(defenses[i].x-self.x)+abs(defenses[i].y-self.y)<dis and defenses[i].destroyed==0):
+                dis=abs(defenses[i].x-self.x)+abs(defenses[i].y-self.y)
+                flag=1
+                ind=i
+        for i in range(len(defenses)):
+            if(defenses[i].destroyed==0):
+                flag=1
+                return buildings.index(defenses[ind])
+        else:
+            flag=0
+        
+        if(flag==0):
+            dis=float("inf")
+            for i in range(len(buildings)):
+                if(abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)<dis and buildings[i].destroyed==0):
+                    dis=abs(buildings[i].x-self.x)+abs(buildings[i].y-self.y)
+                    flag=1
+                    ind=i
+        return ind
+                    
+                    
+                    
+        
+            
+        
+    
+
+    def get_string(self):
+        return self.__string
+    
         
    
 class King(Troops):
@@ -335,6 +628,64 @@ class King(Troops):
         print("\033["+str(startx+48)+";"+str(0)+"H"+Style.RESET_ALL+" "*50,end="")
         print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+str(max(0,self.health)),end="")
         print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*int(self.health//5),end="") 
+        
+class Queen(Troops):
+    def __init__(self,x,y):
+        self.health=250
+        self.name="k"
+        self.destroyed=0
+        self.orig=250
+        self.bar=48
+        self.number=47
+        self.damage=30
+        self.speed=1
+        self.__string=["Q"]
+        self.x=x
+        self.movement=[0,1]
+        self.y=y
+        self.clear=[" "]
+        Troops.addtroop(self,self.x,self.y,self.__string)
+    
+    def move(self,i,j):
+        if(village[self.x+i][self.y+j]==" "):
+            Troops.move(self,self.x,self.y,self.__string,self.clear,i,j)
+            self.x+=i;self.y+=j
+            self.movement=[i,j]
+   
+    
+    def attack(self,i,j):
+        dirx=self.x+self.movement[0]*8;diry=self.y+self.movement[1]*8
+        
+        
+        for i in range(len(buildings)):
+            if(abs(buildings[i].x-dirx)+abs(buildings[i].y-diry)<=5 and buildings[i].destroyed==0):
+                buildings[i].health-=self.damage
+        
+        for i in walls:
+            if(abs(walls[i].x-dirx)+abs(walls[i].y-diry)<=5 and walls[i].destroyed==0):
+                walls[i].health-=self.damage
+                if(walls[i].health<=0):
+                    walls[i].destroyed=0
+                    walls[i].clear()
+                
+                
+        # if(village[self.x+i][self.y+j]!="w" and village[self.x+i][self.y+j]!=" "):
+        #     building_index=mapping[village[self.x+i][self.y+j]]
+        #     buildings[building_index].health-=self.damage
+            
+        # elif(village[self.x+i][self.y+j]=="w"):
+        #     target=walls[str(self.x+i)+"_"+str(self.y+j)]
+        #     target.health-=self.damage
+        #     target.destroyed=1
+        #     if(target.health<=0):
+        #         target.clear()
+                
+    def update_health(self):
+        print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+" "*4,end="")
+        print("\033["+str(startx+48)+";"+str(0)+"H"+Style.RESET_ALL+" "*50,end="")
+        print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+str(max(0,self.health)),end="")
+        print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*int(self.health//5),end="") 
+    
         
         
 class Spells:
@@ -381,16 +732,13 @@ class Heal(Spells):
                 k.health=min(k.orig,1.5*k.health)
                 
         
-            
-        
-        
-        
+           
     
 class Get:
     def __call__(self):
         global king_spawned
         global timetick
-        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick
+        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick,archers,ballons,char_inp,max_archers,max_ballons,max_barabarians
         global k,curr_frame,frames
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -400,22 +748,66 @@ class Get:
             ch =frames[curr_frame][1]
             print("\r",end="")
             if(ch=="z"):
-                b=Barbarian(position1[0],position1[1])
-                barabarians.append(b)
+                if(len(barabarians)<max_barabarians):
+                    b=Barbarian(position1[0],position1[1])
+                    barabarians.append(b)
                 #capture.append([time.time()-starttick,"z"])
             if(ch=="x"):
-                b=Barbarian(position2[0],position2[1])
-                barabarians.append(b)
+                if(len(barabarians)<max_barabarians):
+                    b=Barbarian(position2[0],position2[1])
+                    barabarians.append(b)
                 #capture.append([time.time()-starttick,"x"])
             if(ch=="c"):
-                b=Barbarian(position3[0],position3[1])
-                barabarians.append(b)
+                if(len(barabarians)<max_barabarians):
+                    b=Barbarian(position3[0],position3[1])
+                    barabarians.append(b)
                 #capture.append([time.time()-starttick,"c"])
             if(ch=="k" and king_spawned==0):
-                k=King(2,5)
+                if(char_inp=="k"):
+                    k=King(2,5)
+                else:
+                    k=Queen(2,5)
                 king_spawned=1
                 #capture.append([time.time()-starttick,"k"])
+            
+            if(ch=="b"):
+                if(len(archers)<max_archers):
+                    a=Archer(position1[0],position1[1])
+                    archers.append(a)
+                #capture.append([time.time()-starttick,"b"])
                 
+            if(ch=="n"):
+                if(len(archers)<max_archers):
+                    a=Archer(position2[0],position2[1])
+                    archers.append(a)
+                #capture.append([time.time()-starttick,"n"])
+            
+            if(ch=="m" ):
+                if(len(archers)<max_archers):
+                    a=Archer(position3[0],position3[1])
+                    archers.append(a)
+                #capture.append([time.time()-starttick,"m"])
+                
+            if(ch=="r"):
+                if(len(ballons)<max_ballons):
+                    a=Ballon(position1[0],position1[1])
+                    ballons.append(a)
+                #capture.append([time.time()-starttick,"r"])
+            
+            if(ch=="t"):
+                if(len(ballons)<max_ballons):
+                    a=Ballon(position2[0],position2[1])
+                    ballons.append(a)
+                #capture.append([time.time()-starttick,"t"])
+                
+                
+            if(ch=="y"):
+                if(len(ballons)<max_ballons):
+                    a=Ballon(position3[0],position3[1])
+                    ballons.append(a)
+                #capture.append([time.time()-starttick,"y"])
+            
+         
             if(ch=="a" and king_spawned==1 and k.destroyed==0):
                 k.move(0,-1)
                 k.movement=[0,-1]
@@ -434,14 +826,18 @@ class Get:
                 #capture.append([time.time()-starttick,"s"])
                  
             if(ch==" " and king_spawned==1 and k.destroyed==0):
-                k.attack(0,1)
-                k.attack(0,-1)
-                k.attack(1,0)
-                k.attack(-1,0)
-                k.attack(1,1)
-                k.attack(-1,-1)  
-                k.attack(1,-1)
-                k.attack(-1,1)            
+                if(char_inp=="k"):
+                    k.attack(0,1)
+                    k.attack(0,-1)
+                    k.attack(1,0)
+                    k.attack(-1,0)
+                    k.attack(1,1)
+                    k.attack(-1,-1)
+                    k.attack(1,-1)
+                    k.attack(-1,1)
+                else:
+                    k.attack(0,1)
+                
                 #capture.append([time.time()-starttick," "])
                 
             if(ch=="j"):
@@ -460,7 +856,7 @@ class Get:
                     heal=1
                     #capture.append([time.time()-starttick,"i"])
             if(ch=="e"):
-                capture.append([time.time()-starttick,"e"])
+                #capture.append([time.time()-starttick,"e"])
                 return 1
             timetick=time.time()
             
@@ -492,89 +888,356 @@ def input_to(callback,timeout=0):
 
 
 
-exit=0
-mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15}
-th=TownHall(21,38);symbol="a"
-h1=Hut(10,20);symbol="b"
-h2=Hut(10,30);symbol="c"
-h3=Hut(18,20);symbol="d"
-h4=Hut(15,55);symbol="e"
-h5=Hut(23,55);symbol="f"
-h6=Hut(28,24);symbol="g"
-h7=Hut(35,55);symbol="h"
-h8=Hut(20,70);symbol="i"
-h9=Hut(20,10);symbol="j"
-cannon1=Cannon(18,30);symbol="k"
-cannon2=Cannon(27,38);symbol="l"
-cannon3=Cannon(10,55);symbol="m"
-cannon4=Cannon(29,73);symbol="n"
-cannon5=Cannon(38,10);symbol="o"
-cannon6=Cannon(5,40)
-global buildings
-buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,h9,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
-global cannons
-cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+def level_1():
+    exit=0
+    global mapping,symbol
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17}
+    th=TownHall(21,38);symbol="a"
+    h1=Hut(10,20);symbol="b"
+    h2=Hut(10,24);symbol="c"
+    h3=Hut(18,20);symbol="d"
+    h4=Hut(15,55);symbol="e"
+    h5=Hut(23,55);symbol="f"
+    h6=Hut(28,24);symbol="g"
+    h7=Hut(35,55);symbol="h"
+    h8=Hut(20,70);symbol="i"
+    h9=Hut(20,10);symbol="j"
+    cannon1=Cannon(18,30);symbol="k"
+    cannon2=Cannon(27,38);symbol="l"
+    cannon3=Cannon(10,55);symbol="m"
+    cannon4=Cannon(29,73);symbol="n"
+    cannon5=Cannon(38,10);symbol="o"
+    cannon6=Cannon(5,40);symbol="p"
+    wizard1=Wizard(40,40);symbol="q"
+    wizard2=Wizard(15,65)
+    global buildings,defenses
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,h9,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2]
+    defenses=[wizard1,wizard2,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+    global cannons
+    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+    global wizards
+    wizards=[wizard1,wizard2]
 
 
-thpos=(21,38)
-symbol="w"
-wall1_attrib=(20,15)
-wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
-for i in range(wall1_attrib[0]):
-    w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
-    walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
-for i in range(wall1_attrib[1]):
-    w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
-    walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
-for i  in range(wall1_attrib[0]+2):
-    w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
-    walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
-for i in range(wall1_attrib[1]-2):
-    w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
-    walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
+    thpos=(21,38)
+    symbol="w"
+    wall1_attrib=(20,15)
+    wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
+    for i in range(wall1_attrib[0]):
+        w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+        walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
+    for i in range(wall1_attrib[1]):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
+    for i  in range(wall1_attrib[0]+2):
+        w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+        walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
+    for i in range(wall1_attrib[1]-2):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
 
 
-wall2_attrib=(20,15)
-wall2="/"*wall2_attrib[0]
-wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
-for i in range(wall2_attrib[0]):
-    w=Wall(wall2_start[0],wall2_start[1]+i)
-    walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
-for i in range(wall2_attrib[1]+8):
-    w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
-    walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
-end =i    
-for i in range(wall2_attrib[0]*2):
-    w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
-    walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
-endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
-for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
-    w=Wall(endwall[0]+i,endwall[1])
-    walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
+    wall2_attrib=(20,15)
+    wall2="/"*wall2_attrib[0]
+    wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
+    for i in range(wall2_attrib[0]):
+        w=Wall(wall2_start[0],wall2_start[1]+i)
+        walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
+    for i in range(wall2_attrib[1]+8):
+        w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+        walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
+    end =i    
+    for i in range(wall2_attrib[0]*2):
+        w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+        walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
+    endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
+    for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
+        w=Wall(endwall[0]+i,endwall[1])
+        walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
 
 
+def level_2():
+    exit=0
+    global archers,barabarians,ballons,king_spawned,heal,rage,active_spell
+    king_spawned=0
+    rage=0
+    heal=0
+    active_spell=0
+    archers=[]
+    barabarians=[]
+    ballons=[]
+    global mapping,symbol
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20}
+    symbol="0"
+    th=TownHall(21,38);symbol="a"
+    h1=Hut(10,20);symbol="b"
+    h2=Hut(10,24);symbol="c"
+    h3=Hut(18,20);symbol="d"
+    h4=Hut(15,55);symbol="e"
+    h5=Hut(23,55);symbol="f"
+    h6=Hut(28,24);symbol="g"
+    h7=Hut(35,55);symbol="h"
+    h8=Hut(20,70);symbol="i"
+    cannon7=Cannon(20,10);symbol="j"
+    cannon1=Cannon(18,30);symbol="k"
+    cannon2=Cannon(27,38);symbol="l"
+    cannon3=Cannon(10,55);symbol="m"
+    cannon4=Cannon(29,73);symbol="n"
+    cannon5=Cannon(38,10);symbol="o"
+    cannon6=Cannon(5,40);symbol="p"
+    wizard1=Wizard(40,40);symbol="q"
+    wizard2=Wizard(15,65);symbol="r"
+    wizard3=Wizard(34,60);symbol="s"
+    wizard4=Wizard(34,10);symbol="t"
+    cannon8=Cannon(2,35)
+    global buildings,defenses
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2,wizard3,wizard4,cannon8]
+    defenses=[wizard1,wizard2,wizard3,wizard4,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
+    global cannons
+    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
+    global wizards
+    wizards=[wizard1,wizard2,wizard3,wizard4]
 
-starttick=time.time()
+
+    thpos=(21,38)
+    symbol="w"
+    wall1_attrib=(20,15)
+    wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
+    for i in range(wall1_attrib[0]):
+        w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+        walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
+    for i in range(wall1_attrib[1]):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
+    for i  in range(wall1_attrib[0]+2):
+        w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+        walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
+    for i in range(wall1_attrib[1]-2):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
+
+
+    wall2_attrib=(20,15)
+    wall2="/"*wall2_attrib[0]
+    wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
+    for i in range(wall2_attrib[0]):
+        w=Wall(wall2_start[0],wall2_start[1]+i)
+        walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
+    for i in range(wall2_attrib[1]+8):
+        w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+        walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
+    end =i    
+    for i in range(wall2_attrib[0]*2):
+        w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+        walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
+    endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
+    for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
+        w=Wall(endwall[0]+i,endwall[1])
+        walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
+    
+    
+    wall5="/"*15
+    wall5_start=(18,3)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,3)
+        walls.update({str(wall5_start[0]+i)+"_"+str(3):w})
+    
+    wall5_start=(42,3)
+    wall5="/"*76
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    
+    wall5_start=(30,47)   
+    for i in range(1,13):
+        w=Wall(wall5_start[0]+i,47)
+        walls.update({str(wall5_start[0]+i)+"_"+str(47):w})
+        
+    
+    wall5="/"*18
+    wall5_start=(18,62)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+        
+        
+    wall5_start=(18,79)   
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,79)
+        walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+    
+def level_3():
+    exit=0
+    global mapping,symbol
+    global archers,barabarians,ballons,king_spawned,heal,rage,active_spell
+    king_spawned=0
+    archers=[]
+    heal=0
+    rage=0
+    active_spell=[]
+    barabarians=[]
+    ballons=[]
+    symbol="0"
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23,"x":24,"y":25,"z":26}
+    th=TownHall(21,38);symbol="a"
+    h1=Hut(10,20);symbol="b"
+    h2=Hut(10,24);symbol="c"
+    h3=Hut(18,20);symbol="d"
+    h4=Hut(15,55);symbol="e"
+    h5=Hut(23,55);symbol="f"
+    h6=Hut(28,24);symbol="g"
+    h7=Hut(35,55);symbol="h"
+    h8=Hut(20,70);symbol="i"
+    cannon7=Cannon(20,10);symbol="j"
+    cannon1=Cannon(18,30);symbol="k"
+    cannon2=Cannon(27,38);symbol="l"
+    cannon3=Cannon(10,55);symbol="m"
+    cannon4=Cannon(29,73);symbol="n"
+    cannon5=Cannon(38,10);symbol="o"
+    cannon6=Cannon(5,40);symbol="p"
+    wizard1=Wizard(40,40);symbol="q"
+    wizard2=Wizard(15,65);symbol="r"
+    wizard3=Wizard(34,60);symbol="s"
+    wizard4=Wizard(34,10);symbol="t"
+    cannon8=Cannon(2,35);symbol="u"
+    wizard5=Wizard(34,25);symbol="v"
+    cannon9=Cannon(12,10);symbol="w"
+    wizard6=Wizard(9,7);symbol="x"
+    cannon10=Cannon(7,73);symbol="y"
+    wizard7=Wizard(6,60);symbol="z"
+    global buildings,defenses
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2,wizard3,wizard4,cannon8,wizard5,cannon9,wizard6,cannon10,wizard7]
+    defenses=[wizard1,wizard2,wizard3,wizard4,wizard5,wizard6,wizard7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8,cannon9,cannon10]
+    global cannons
+    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8,cannon9,cannon10]
+    global wizards
+    wizards=[wizard1,wizard2,wizard3,wizard4,wizard5,wizard6,wizard7]
+
+
+    thpos=(21,38)
+    symbol="w"
+    wall1_attrib=(20,15)
+    wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
+    for i in range(wall1_attrib[0]):
+        w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+        walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
+    for i in range(wall1_attrib[1]):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
+    for i  in range(wall1_attrib[0]+2):
+        w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+        walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
+    for i in range(wall1_attrib[1]-2):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
+
+
+    wall2_attrib=(20,15)
+    wall2="/"*wall2_attrib[0]
+    wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
+    for i in range(wall2_attrib[0]):
+        w=Wall(wall2_start[0],wall2_start[1]+i)
+        walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
+    for i in range(wall2_attrib[1]+8):
+        w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+        walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
+    end =i    
+    for i in range(wall2_attrib[0]*2):
+        w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+        walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
+    endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
+    for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
+        w=Wall(endwall[0]+i,endwall[1])
+        walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
+    
+    
+    wall5="/"*15
+    wall5_start=(18,3)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,3)
+        walls.update({str(wall5_start[0]+i)+"_"+str(3):w})
+    
+    wall5_start=(42,3)
+    wall5="/"*76
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    
+    wall5_start=(30,47)   
+    for i in range(1,13):
+        w=Wall(wall5_start[0]+i,47)
+        walls.update({str(wall5_start[0]+i)+"_"+str(47):w})
+        
+    
+    wall5="/"*18
+    wall5_start=(18,62)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+        
+        
+    wall5_start=(18,79)   
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,79)
+        walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+    
+    
+    wall5_start=(4,3)   
+    for i in range(1,14):
+        w=Wall(wall5_start[0]+i,3)
+        walls.update({str(wall5_start[0]+i)+"_"+str(3):w})
+    
+    wall5="/"*77
+    wall5_start=(4,3)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+        
+    
+    wall5_start=(4,79)   
+    for i in range(1,14):
+        w=Wall(wall5_start[0]+i,79)
+        walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+    
+    
+    
+    
+    
+
 #-----------------------------------------------Main Code------------------------------------
 def getinput():
     a=Get()
     ans=a.__call__()
     return ans
-position1=(2,35)
+position1=(0,26)
 position2=(45,20)
-position3=(40,70)
-
+position3=(45,70)
 
 def check_end_game():
     global king_spawned,k
-    buildflag=1;kflag=1;bflag=1
+    buildflag=1;kflag=1;bflag=0;ar_flag=0;bl_flag=0;over_flag=0
     for i in range(len(barabarians)):
         if(barabarians[i].dead==0):
             bflag=1
             break
+    for i in range(len(ballons)):
+        if(ballons[i].dead==0):
+            bl_flag=1
+            break
+    for i in range(len(archers)):
+        if(archers[i].dead==0):
+            ar_flag=1
+            break
+    if(len(barabarians)+len(archers)+len(ballons)>0):
+        over_flag=0
     else:
-        if(len(barabarians)>0):
-            bflag=0
+        over_flag=1
     for i in range(len(buildings)):
         if(buildings[i].destroyed==0):
             buildflag=1
@@ -586,16 +1249,16 @@ def check_end_game():
             kflag=0
         else:
             kflag=1
-    if(kflag==0 and bflag==0):
+    if(kflag==0 and bflag==0 and ar_flag==0 and bl_flag==0 and over_flag==0):
         return (True,"You Lose")
     elif(buildflag==0):
         return (True,"You Won")
     
     else:
         return (False,"")
-
+        
 def animate():
-    global rage,king_spawned,k
+    global rage,king_spawned,k,wizards
     res=check_end_game()
     if(res[0]):
         return res
@@ -626,28 +1289,69 @@ def animate():
         if(barabarians[i].health<=0 and barabarians[i].dead==0):
             barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear)
             barabarians[i].dead=1
+            
+        
+    for i in range(len(archers)):
+        if(archers[i].dead==0):
+            for j in range(archers[i].speed):
+                result=archers[i].nearest()
+                locx=buildings[result].x;locy=buildings[result].y
+                dirx=(locx-archers[i].x);diry=(locy-archers[i].y)
+                movex=0 if(dirx==0) else (locx-archers[i].x)/abs(locx-archers[i].x)
+                movey=0 if(diry==0) else (locy-archers[i].y)/abs(locy-archers[i].y)
+                archers[i].move(int(movex),int(movey))
+            
+        if(archers[i].health<=(70/100)*archers[i].orig and archers[i].dead==0):
+            archers[i].mid_color(archers[i].x,archers[i].y,archers[i].get_string())
+        if(archers[i].health<=(30/100)*archers[i].orig and archers[i].dead==0):
+            archers[i].low_color(archers[i].x,archers[i].y,archers[i].get_string())
+        if(archers[i].health<=0 and archers[i].dead==0):
+            archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
+            archers[i].dead=1
+            
+    
+    for i in range(len(ballons)):
+        if(ballons[i].dead==0):
+            for j in range(ballons[i].speed):
+                result=ballons[i].nearest()
+                locx=buildings[result].x;locy=buildings[result].y
+                dirx=(locx-ballons[i].x);diry=(locy-ballons[i].y)
+                movex=0 if(dirx==0) else (locx-ballons[i].x)/abs(locx-ballons[i].x)
+                movey=0 if(diry==0) else (locy-ballons[i].y)/abs(locy-ballons[i].y)
+                ballons[i].move(int(movex),int(movey))
+            
+        if(ballons[i].health<=(70/100)*ballons[i].orig and ballons[i].dead==0):
+            ballons[i].mid_color(ballons[i].x,ballons[i].y,ballons[i].get_string())
+        if(ballons[i].health<=(30/100)*ballons[i].orig and ballons[i].dead==0):
+            ballons[i].low_color(ballons[i].x,ballons[i].y,ballons[i].get_string())
+        if(ballons[i].health<=0 and ballons[i].dead==0):
+            ballons[i].destroy(ballons[i].x,ballons[i].y,ballons[i].clear)
+            ballons[i].dead=1
+            
     if(king_spawned==1):
         if(k.health<=0 and k.destroyed==0):
             k.destroy(k.x,k.y,k.clear)
             k.destroyed=1
-            
-        
-            
+       
     for i in range(len(cannons)):
         if(cannons[i].destroyed==0):
             c=cannons[i].attack()
     
+    for i in range(len(wizards)):
+        if(wizards[i].destroyed==0):
+            c=wizards[i].attack()
     return (False,"")
             
     
 
-
-while(1 and curr_frame<len(frames)):
-    os.system("stty echo")
+level_1()
+while(curr_frame<len(frames)):
+    os.system("stty -echo")
     if(time.time()-starttick>frames[curr_frame][0]):
-        ans=getinput()
+        ans=input_to(getinput,timeout)
         curr_frame+=1
         if(ans==1):
+            os.system("stty echo")
             break
         game=animate()
         if(game[0]==1):
@@ -655,13 +1359,95 @@ while(1 and curr_frame<len(frames)):
             os.system("stty echo")
             break
     animate()
-    time.sleep(timeout)
     
     print("",end="")
     print("\r",end="")
+    time.sleep(timeout)
+    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+
+for i in range(len(buildings)):
+    buildings[i].clear()
+for i in walls:
+    walls[i].clear()
+for i in range(len(barabarians)):
+    barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear) 
+for i in range(len(archers)):
+    archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
+for i in range(len(ballons)):
+    ballons[i].destroy(ballons[i].x,ballons[i].y,ballons[i].clear)
+if(king_spawned):
+    k.destroy(k.x,k.y,k.clear)
     
-    
-    
+if(game[1]=="You Won"):
+    print("\033["+str(0)+";"+str(0)+"H"+"") 
+    lv2=inpu_arr[1]
+    if(lv2=="y"):
+        level_2()
+        print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+"250",end="")
+        print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
+        print(Style.RESET_ALL,end="")
+        print("\033["+str(1)+";"+str(0)+"H"+"")
+        print("\033["+str(startx+49)+";"+str(0)+"H"+" "*len(game[1]),end="")
+        while(curr_frame<len(frames)):
+            os.system("stty -echo")
+            if(time.time()-starttick>frames[curr_frame][0]):
+                ans=input_to(getinput,timeout)
+                curr_frame+=1
+                if(ans==1):
+                    os.system("stty echo")
+                    break
+                game=animate()
+                if(game[0]==1):
+                    print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                    os.system("stty echo")
+                    break
+            animate()
+            print("",end="")
+            print("\r",end="")
+            time.sleep(timeout)
+            termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+            
+        if(game[1]=="You Won"):
+            for i in range(len(buildings)):
+                buildings[i].clear()
+            for i in walls:
+                walls[i].clear()
+            for i in range(len(barabarians)):
+                barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear) 
+            for i in range(len(archers)):
+                archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
+            for i in range(len(ballons)):
+                ballons[i].destroy(ballons[i].x,ballons[i].y,ballons[i].clear)
+            if(king_spawned):
+                k.destroy(k.x,k.y,k.clear)
+                
+            print("\033["+str(0)+";"+str(0)+"H"+"") 
+            lv3=inpu_arr[2]
+            if(lv3=="y"):
+                level_3()
+                print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+"250",end="")
+                print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
+                print(Style.RESET_ALL,end="")
+                print("\033["+str(startx+49)+";"+str(0)+"H"+" "*len(game[1]),end="")
+                while(curr_frame<len(frames)):
+                    os.system("stty -echo")
+                    if(time.time()-starttick>frames[curr_frame][0]):
+                        ans=input_to(getinput,timeout)
+                        curr_frame+=1
+                        ans=input_to(getinput,timeout)
+                        if(ans==1):
+                            os.system("stty echo")
+                            break
+                        game=animate()
+                        if(game[0]==1):
+                            print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                            os.system("stty echo")
+                            break
+                    animate()
+                    
+                    print("",end="")
+                    print("\r",end="")
+                    time.sleep(timeout)
+                    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
 
     
-

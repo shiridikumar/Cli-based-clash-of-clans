@@ -5,6 +5,7 @@ import termios
 import tty
 import signal
 import os
+inpu_arr=[]
 total=open("./src/total.txt","r+")
 totalreplays=0
 for i in total.readlines():
@@ -12,12 +13,16 @@ for i in total.readlines():
 global char_inp
 f=open("./replays/replay{}.txt".format(totalreplays+1),"w+")   
 valid=False
+global capture,starttick
+capture=[]
+starttick=time.time()
 while(not(valid)):
     char_inp=input("Which Character do you want to choose : q for queen / k for king \n")
     if(char_inp!="k" and char_inp!="q"):
         print("Invalid Response\n")
         valid=False
     else:
+        inpu_arr.append(char_inp)
         valid=True
 
 print("\033["+str(1)+";"+str(0)+"H"+"")  
@@ -36,9 +41,10 @@ else:
 print(250)
 print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
 print(Style.RESET_ALL,end="")
-global capture,starttick
-capture=[]
-global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol,archers,ballons
+
+
+global village,mapping,k,timetick,rage_spell,heal_spell,healtime,heal,timeout,rage,ragetime,walls,king_spawned,active_spell,barabarians,symbol,archers,ballons,max_archers,max_ballons,max_barabarians
+max_archers=30;max_barabarians=30;max_ballons=15
 rage=0
 heal=0
 ballons=[]
@@ -708,7 +714,7 @@ class Get:
     def __call__(self):
         global king_spawned
         global timetick
-        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick,archers,ballons,char_inp
+        global active_spell,rage,ragetime,rage_spell,heal_spell,heal,healtime,capture,starttick,archers,ballons,char_inp,max_archers,max_ballons,max_barabarians
         global k
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -718,16 +724,19 @@ class Get:
             ch = sys.stdin.read(1)
             print("\r",end="")
             if(ch=="z"):
-                b=Barbarian(position1[0],position1[1])
-                barabarians.append(b)
+                if(len(barabarians)<max_barabarians):
+                    b=Barbarian(position1[0],position1[1])
+                    barabarians.append(b)
                 capture.append([time.time()-starttick,"z"])
             if(ch=="x"):
-                b=Barbarian(position2[0],position2[1])
-                barabarians.append(b)
+                if(len(barabarians)<max_barabarians):
+                    b=Barbarian(position2[0],position2[1])
+                    barabarians.append(b)
                 capture.append([time.time()-starttick,"x"])
             if(ch=="c"):
-                b=Barbarian(position3[0],position3[1])
-                barabarians.append(b)
+                if(len(barabarians)<max_barabarians):
+                    b=Barbarian(position3[0],position3[1])
+                    barabarians.append(b)
                 capture.append([time.time()-starttick,"c"])
             if(ch=="k" and king_spawned==0):
                 if(char_inp=="k"):
@@ -738,34 +747,40 @@ class Get:
                 capture.append([time.time()-starttick,"k"])
             
             if(ch=="b"):
-                a=Archer(position1[0],position1[1])
-                archers.append(a)
+                if(len(archers)<max_archers):
+                    a=Archer(position1[0],position1[1])
+                    archers.append(a)
                 capture.append([time.time()-starttick,"b"])
                 
             if(ch=="n"):
-                a=Archer(position2[0],position2[1])
-                archers.append(a)
+                if(len(archers)<max_archers):
+                    a=Archer(position2[0],position2[1])
+                    archers.append(a)
                 capture.append([time.time()-starttick,"n"])
             
             if(ch=="m" ):
-                a=Archer(position3[0],position3[1])
-                archers.append(a)
+                if(len(archers)<max_archers):
+                    a=Archer(position3[0],position3[1])
+                    archers.append(a)
                 capture.append([time.time()-starttick,"m"])
                 
             if(ch=="r"):
-                a=Ballon(position1[0],position1[1])
-                ballons.append(a)
+                if(len(ballons)<max_ballons):
+                    a=Ballon(position1[0],position1[1])
+                    ballons.append(a)
                 capture.append([time.time()-starttick,"r"])
             
-            if(ch=="t" and king_spawned==0):
-                a=Ballon(position2[0],position2[1])
-                ballons.append(a)
+            if(ch=="t"):
+                if(len(ballons)<max_ballons):
+                    a=Ballon(position2[0],position2[1])
+                    ballons.append(a)
                 capture.append([time.time()-starttick,"t"])
                 
                 
-            if(ch=="y" and king_spawned==0):
-                a=Ballon(position3[0],position3[1])
-                ballons.append(a)
+            if(ch=="y"):
+                if(len(ballons)<max_ballons):
+                    a=Ballon(position3[0],position3[1])
+                    ballons.append(a)
                 capture.append([time.time()-starttick,"y"])
             
          
@@ -919,6 +934,14 @@ def level_1():
 
 def level_2():
     exit=0
+    global archers,barabarians,ballons,king_spawned,heal,rage,active_spell
+    king_spawned=0
+    rage=0
+    heal=0
+    active_spell=0
+    archers=[]
+    barabarians=[]
+    ballons=[]
     global mapping,symbol
     mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20}
     symbol="0"
@@ -944,8 +967,8 @@ def level_2():
     wizard4=Wizard(34,10);symbol="t"
     cannon8=Cannon(2,35)
     global buildings,defenses
-    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2]
-    defenses=[wizard1,wizard2,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2,wizard3,wizard4,cannon8]
+    defenses=[wizard1,wizard2,wizard3,wizard4,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
     global cannons
     cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
     global wizards
@@ -1025,8 +1048,16 @@ def level_2():
 def level_3():
     exit=0
     global mapping,symbol
+    global archers,barabarians,ballons,king_spawned,heal,rage,active_spell
+    king_spawned=0
+    archers=[]
+    heal=0
+    rage=0
+    active_spell=[]
+    barabarians=[]
+    ballons=[]
     symbol="0"
-    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20}
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23,"x":24,"y":25,"z":26}
     th=TownHall(21,38);symbol="a"
     h1=Hut(10,20);symbol="b"
     h2=Hut(10,24);symbol="c"
@@ -1047,14 +1078,19 @@ def level_3():
     wizard2=Wizard(15,65);symbol="r"
     wizard3=Wizard(34,60);symbol="s"
     wizard4=Wizard(34,10);symbol="t"
-    cannon8=Cannon(2,35)
+    cannon8=Cannon(2,35);symbol="u"
+    wizard5=Wizard(34,25);symbol="v"
+    cannon9=Cannon(12,10);symbol="w"
+    wizard6=Wizard(9,7);symbol="x"
+    cannon10=Cannon(7,73);symbol="y"
+    wizard7=Wizard(6,60);symbol="z"
     global buildings,defenses
-    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2]
-    defenses=[wizard1,wizard2,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2,wizard3,wizard4,cannon8,wizard5,cannon9,wizard6,cannon10,wizard7]
+    defenses=[wizard1,wizard2,wizard3,wizard4,wizard5,wizard6,wizard7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8,cannon9,cannon10]
     global cannons
-    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
+    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8,cannon9,cannon10]
     global wizards
-    wizards=[wizard1,wizard2,wizard3,wizard4]
+    wizards=[wizard1,wizard2,wizard3,wizard4,wizard5,wizard6,wizard7]
 
 
     thpos=(21,38)
@@ -1126,28 +1162,57 @@ def level_3():
     for i in range(1,25):
         w=Wall(wall5_start[0]+i,79)
         walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+    
+    
+    wall5_start=(4,3)   
+    for i in range(1,14):
+        w=Wall(wall5_start[0]+i,3)
+        walls.update({str(wall5_start[0]+i)+"_"+str(3):w})
+    
+    wall5="/"*77
+    wall5_start=(4,3)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+        
+    
+    wall5_start=(4,79)   
+    for i in range(1,14):
+        w=Wall(wall5_start[0]+i,79)
+        walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+    
+    
+    
+    
+    
 
-    
-    
-starttick=time.time()
 #-----------------------------------------------Main Code------------------------------------
 def getinput():
     a=Get()
     ans=a.__call__()
     return ans
-position1=(2,35)
+position1=(0,26)
 position2=(45,20)
-position3=(40,70)
+position3=(45,70)
 def check_end_game():
     global king_spawned,k
-    buildflag=1;kflag=1;bflag=1
+    buildflag=1;kflag=1;bflag=0;ar_flag=0;bl_flag=0;over_flag=0
     for i in range(len(barabarians)):
         if(barabarians[i].dead==0):
             bflag=1
             break
+    for i in range(len(ballons)):
+        if(ballons[i].dead==0):
+            bl_flag=1
+            break
+    for i in range(len(archers)):
+        if(archers[i].dead==0):
+            ar_flag=1
+            break
+    if(len(barabarians)+len(archers)+len(ballons)>0):
+        over_flag=0
     else:
-        if(len(barabarians)>0):
-            bflag=0
+        over_flag=1
     for i in range(len(buildings)):
         if(buildings[i].destroyed==0):
             buildflag=1
@@ -1159,7 +1224,7 @@ def check_end_game():
             kflag=0
         else:
             kflag=1
-    if(kflag==0 and bflag==0):
+    if(kflag==0 and bflag==0 and ar_flag==0 and bl_flag==0 and over_flag==0):
         return (True,"You Lose")
     elif(buildflag==0):
         return (True,"You Won")
@@ -1254,7 +1319,7 @@ def animate():
             
     
 
-level_3()
+level_1()
 while(1):
     os.system("stty -echo")
     ans=input_to(getinput,timeout)
@@ -1277,8 +1342,7 @@ for i in range(len(buildings)):
 for i in walls:
     walls[i].clear()
 for i in range(len(barabarians)):
-    barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear)
-    
+    barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear) 
 for i in range(len(archers)):
     archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
 for i in range(len(ballons)):
@@ -1286,10 +1350,82 @@ for i in range(len(ballons)):
 if(king_spawned):
     k.destroy(k.x,k.y,k.clear)
     
+if(game[1]=="You Won"):
+    print("\033["+str(0)+";"+str(0)+"H"+"") 
+    lv2=input("You have completed level 1 : select y for level2 n for exit :  ")
+    inpu_arr.append(lv2)
+    if(lv2=="y"):
+        level_2()
+        print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+"250",end="")
+        print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
+        print(Style.RESET_ALL,end="")
+        print("\033["+str(1)+";"+str(0)+"H"+"")
+        print("\033["+str(startx+49)+";"+str(0)+"H"+" "*len(game[1]),end="")
+        while(1):
+            os.system("stty -echo")
+            ans=input_to(getinput,timeout)
+            if(ans==1):
+                os.system("stty echo")
+                break
+            game=animate()
+            if(game[0]==1):
+                print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                os.system("stty echo")
+                break
+            print("",end="")
+            print("\r",end="")
+            time.sleep(timeout)
+            termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+            
+        if(game[1]=="You Won"):
+            for i in range(len(buildings)):
+                buildings[i].clear()
+            for i in walls:
+                walls[i].clear()
+            for i in range(len(barabarians)):
+                barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear) 
+            for i in range(len(archers)):
+                archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
+            for i in range(len(ballons)):
+                ballons[i].destroy(ballons[i].x,ballons[i].y,ballons[i].clear)
+            if(king_spawned):
+                k.destroy(k.x,k.y,k.clear)
+                
+            print("\033["+str(0)+";"+str(0)+"H"+"") 
+            lv3=input("You have completed level 2 : select y for level 3 , n for exit :  ")
+            inpu_arr.append(lv3)
+            if(lv3=="y"):
+                level_3()
+                print("\033["+str(startx+47)+";"+str(0)+"H"+Style.RESET_ALL+"250",end="")
+                print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
+                print(Style.RESET_ALL,end="")
+                print("\033["+str(startx+49)+";"+str(0)+"H"+" "*len(game[1]),end="")
+                while(1):
+                    os.system("stty -echo")
+                    ans=input_to(getinput,timeout)
+                    if(ans==1):
+                        os.system("stty echo")
+                        break
+                    game=animate()
+                    if(game[0]==1):
+                        print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                        os.system("stty echo")
+                        break
+                    
+                    print("",end="")
+                    print("\r",end="")
+                    time.sleep(timeout)
+                    termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+            
+            
+            
+            
+            
     
-level_2()
-    
+
 f.write(str(capture))
+f.write("\n")
+f.write(str(inpu_arr))
 total.close()
 total=open("./src/total.txt","w+")
 total.write(str(totalreplays+1))
