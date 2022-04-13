@@ -371,8 +371,11 @@ class Troops:
     def destroy(self,x,y,string):
         for i in range(len(string)):
             posx=startx-1+x+i;posy=starty-1+y
-            village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
-            print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+            try:
+                village[x+i][y:y+len(string[i])]=str(" ")*len(string[i])
+                print("\033["+str(posx)+";"+str(posy)+"H"+Style.RESET_ALL+string[i],end="")
+            except:
+                print(x,y,i)
 
     
             
@@ -1081,7 +1084,7 @@ def level_3():
     barabarians=[]
     ballons=[]
     symbol="0"
-    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23,"x":24,"y":25,"z":26}
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"x":22,"y":23,"z":24}
     th=TownHall(21,38);symbol="a"
     h1=Hut(10,20);symbol="b"
     h2=Hut(10,24);symbol="c"
@@ -1104,10 +1107,10 @@ def level_3():
     wizard4=Wizard(34,10);symbol="t"
     cannon8=Cannon(2,35);symbol="u"
     wizard5=Wizard(34,25);symbol="v"
-    cannon9=Cannon(12,10);symbol="w"
-    wizard6=Wizard(9,7);symbol="x"
-    cannon10=Cannon(7,73);symbol="y"
-    wizard7=Wizard(6,60);symbol="z"
+    cannon9=Cannon(12,10);symbol="x"
+    wizard6=Wizard(9,7);symbol="y"
+    cannon10=Cannon(7,73);symbol="z"
+    wizard7=Wizard(6,60)
     global buildings,defenses
     buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2,wizard3,wizard4,cannon8,wizard5,cannon9,wizard6,cannon10,wizard7]
     defenses=[wizard1,wizard2,wizard3,wizard4,wizard5,wizard6,wizard7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8,cannon9,cannon10]
@@ -1345,20 +1348,33 @@ def animate():
     
 
 level_1()
-while(curr_frame<len(frames)):
+while(1):
     os.system("stty -echo")
-    if(time.time()-starttick>frames[curr_frame][0]):
-        ans=input_to(getinput,timeout)
-        curr_frame+=1
-        if(ans==1):
-            os.system("stty echo")
-            break
+    if(curr_frame<len(frames)):
+        if(time.time()-starttick>frames[curr_frame][0]):
+            ans=input_to(getinput,timeout)
+            curr_frame+=1
+            if(ans==1):
+                os.system("stty echo")
+                break
+            game=animate()
+            if(game[0]==1):
+                print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                os.system("stty echo")
+                break
+        else:
+            game=animate()
+            if(game[0]==1):
+                print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                os.system("stty echo")
+                break
+    else:
         game=animate()
         if(game[0]==1):
             print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
             os.system("stty echo")
             break
-    animate()
+    
     
     print("",end="")
     print("\r",end="")
@@ -1380,6 +1396,7 @@ if(king_spawned):
     
 if(game[1]=="You Won"):
     print("\033["+str(0)+";"+str(0)+"H"+"") 
+    print("You have completed level 2 : select y for level 3 , n for exit :  {}".format(inpu_arr[1]))
     lv2=inpu_arr[1]
     if(lv2=="y"):
         level_2()
@@ -1388,20 +1405,32 @@ if(game[1]=="You Won"):
         print(Style.RESET_ALL,end="")
         print("\033["+str(1)+";"+str(0)+"H"+"")
         print("\033["+str(startx+49)+";"+str(0)+"H"+" "*len(game[1]),end="")
-        while(curr_frame<len(frames)):
+        while(1):
             os.system("stty -echo")
-            if(time.time()-starttick>frames[curr_frame][0]):
-                ans=input_to(getinput,timeout)
-                curr_frame+=1
-                if(ans==1):
-                    os.system("stty echo")
-                    break
+            if(curr_frame<len(frames)):
+                if(time.time()-starttick>frames[curr_frame][0]):
+                    ans=input_to(getinput,timeout)
+                    curr_frame+=1
+                    if(ans==1):
+                        os.system("stty echo")
+                        break
+                    game=animate()
+                    if(game[0]==1):
+                        print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                        os.system("stty echo")
+                        break
+                else:
+                    game=animate()
+                    if(game[0]==1):
+                        print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                        os.system("stty echo")
+                        break
+            else:
                 game=animate()
                 if(game[0]==1):
                     print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
                     os.system("stty echo")
                     break
-            animate()
             print("",end="")
             print("\r",end="")
             time.sleep(timeout)
@@ -1429,22 +1458,33 @@ if(game[1]=="You Won"):
                 print("\033["+str(startx+48)+";"+str(0)+"H"+Back.GREEN+"|"*50,end="")
                 print(Style.RESET_ALL,end="")
                 print("\033["+str(startx+49)+";"+str(0)+"H"+" "*len(game[1]),end="")
-                while(curr_frame<len(frames)):
+                while(1):
                     os.system("stty -echo")
-                    if(time.time()-starttick>frames[curr_frame][0]):
-                        ans=input_to(getinput,timeout)
-                        curr_frame+=1
-                        ans=input_to(getinput,timeout)
-                        if(ans==1):
-                            os.system("stty echo")
-                            break
+                    if(curr_frame<len(frames)):
+                        if(time.time()-starttick>frames[curr_frame][0]):
+                            ans=input_to(getinput,timeout)
+                            curr_frame+=1
+                            if(ans==1):
+                                os.system("stty echo")
+                                break
+                            game=animate()
+                            if(game[0]==1):
+                                print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                                os.system("stty echo")
+                                break
+                        else:
+                            game=animate()
+                            if(game[0]==1):
+                                print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
+                                os.system("stty echo")
+                                break
+                    else:
                         game=animate()
                         if(game[0]==1):
                             print("\033["+str(startx+49)+";"+str(0)+"H"+game[1],end="")
                             os.system("stty echo")
                             break
-                    animate()
-                    
+                           
                     print("",end="")
                     print("\r",end="")
                     time.sleep(timeout)

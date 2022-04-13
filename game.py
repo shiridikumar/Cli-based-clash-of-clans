@@ -1057,7 +1057,7 @@ def level_3():
     barabarians=[]
     ballons=[]
     symbol="0"
-    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"w":23,"x":24,"y":25,"z":26}
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20,"u":21,"v":22,"x":22,"y":23,"z":24}
     th=TownHall(21,38);symbol="a"
     h1=Hut(10,20);symbol="b"
     h2=Hut(10,24);symbol="c"
@@ -1080,10 +1080,10 @@ def level_3():
     wizard4=Wizard(34,10);symbol="t"
     cannon8=Cannon(2,35);symbol="u"
     wizard5=Wizard(34,25);symbol="v"
-    cannon9=Cannon(12,10);symbol="w"
-    wizard6=Wizard(9,7);symbol="x"
-    cannon10=Cannon(7,73);symbol="y"
-    wizard7=Wizard(6,60);symbol="z"
+    cannon9=Cannon(12,10);symbol="x"
+    wizard6=Wizard(9,7);symbol="y"
+    cannon10=Cannon(7,73);symbol="z"
+    wizard7=Wizard(6,60)
     global buildings,defenses
     buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2,wizard3,wizard4,cannon8,wizard5,cannon9,wizard6,cannon10,wizard7]
     defenses=[wizard1,wizard2,wizard3,wizard4,wizard5,wizard6,wizard7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8,cannon9,cannon10]
