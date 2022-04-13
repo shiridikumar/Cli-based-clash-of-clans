@@ -851,7 +851,7 @@ def input_to(callback,timeout=0):
 
 def level_1():
     exit=0
-    global mapping
+    global mapping,symbol
     mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17}
     th=TownHall(21,38);symbol="a"
     h1=Hut(10,20);symbol="b"
@@ -868,8 +868,8 @@ def level_1():
     cannon3=Cannon(10,55);symbol="m"
     cannon4=Cannon(29,73);symbol="n"
     cannon5=Cannon(38,10);symbol="o"
-    cannon6=Cannon(5,40)
-    wizard1=Wizard(40,40)
+    cannon6=Cannon(5,40);symbol="p"
+    wizard1=Wizard(40,40);symbol="q"
     wizard2=Wizard(15,65)
     global buildings,defenses
     buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,h9,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2]
@@ -917,7 +917,218 @@ def level_1():
         walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
 
 
+def level_2():
+    exit=0
+    global mapping,symbol
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20}
+    symbol="0"
+    th=TownHall(21,38);symbol="a"
+    h1=Hut(10,20);symbol="b"
+    h2=Hut(10,24);symbol="c"
+    h3=Hut(18,20);symbol="d"
+    h4=Hut(15,55);symbol="e"
+    h5=Hut(23,55);symbol="f"
+    h6=Hut(28,24);symbol="g"
+    h7=Hut(35,55);symbol="h"
+    h8=Hut(20,70);symbol="i"
+    cannon7=Cannon(20,10);symbol="j"
+    cannon1=Cannon(18,30);symbol="k"
+    cannon2=Cannon(27,38);symbol="l"
+    cannon3=Cannon(10,55);symbol="m"
+    cannon4=Cannon(29,73);symbol="n"
+    cannon5=Cannon(38,10);symbol="o"
+    cannon6=Cannon(5,40);symbol="p"
+    wizard1=Wizard(40,40);symbol="q"
+    wizard2=Wizard(15,65);symbol="r"
+    wizard3=Wizard(34,60);symbol="s"
+    wizard4=Wizard(34,10);symbol="t"
+    cannon8=Cannon(2,35)
+    global buildings,defenses
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2]
+    defenses=[wizard1,wizard2,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+    global cannons
+    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
+    global wizards
+    wizards=[wizard1,wizard2,wizard3,wizard4]
 
+
+    thpos=(21,38)
+    symbol="w"
+    wall1_attrib=(20,15)
+    wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
+    for i in range(wall1_attrib[0]):
+        w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+        walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
+    for i in range(wall1_attrib[1]):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
+    for i  in range(wall1_attrib[0]+2):
+        w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+        walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
+    for i in range(wall1_attrib[1]-2):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
+
+
+    wall2_attrib=(20,15)
+    wall2="/"*wall2_attrib[0]
+    wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
+    for i in range(wall2_attrib[0]):
+        w=Wall(wall2_start[0],wall2_start[1]+i)
+        walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
+    for i in range(wall2_attrib[1]+8):
+        w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+        walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
+    end =i    
+    for i in range(wall2_attrib[0]*2):
+        w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+        walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
+    endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
+    for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
+        w=Wall(endwall[0]+i,endwall[1])
+        walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
+    
+    
+    wall5="/"*15
+    wall5_start=(18,3)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,3)
+        walls.update({str(wall5_start[0]+i)+"_"+str(3):w})
+    
+    wall5_start=(42,3)
+    wall5="/"*76
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    
+    wall5_start=(30,47)   
+    for i in range(1,13):
+        w=Wall(wall5_start[0]+i,47)
+        walls.update({str(wall5_start[0]+i)+"_"+str(47):w})
+        
+    
+    wall5="/"*18
+    wall5_start=(18,62)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+        
+        
+    wall5_start=(18,79)   
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,79)
+        walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+    
+def level_3():
+    exit=0
+    global mapping,symbol
+    symbol="0"
+    mapping={"0":0,"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"q":17,"r":18,"s":19,"t":20}
+    th=TownHall(21,38);symbol="a"
+    h1=Hut(10,20);symbol="b"
+    h2=Hut(10,24);symbol="c"
+    h3=Hut(18,20);symbol="d"
+    h4=Hut(15,55);symbol="e"
+    h5=Hut(23,55);symbol="f"
+    h6=Hut(28,24);symbol="g"
+    h7=Hut(35,55);symbol="h"
+    h8=Hut(20,70);symbol="i"
+    cannon7=Cannon(20,10);symbol="j"
+    cannon1=Cannon(18,30);symbol="k"
+    cannon2=Cannon(27,38);symbol="l"
+    cannon3=Cannon(10,55);symbol="m"
+    cannon4=Cannon(29,73);symbol="n"
+    cannon5=Cannon(38,10);symbol="o"
+    cannon6=Cannon(5,40);symbol="p"
+    wizard1=Wizard(40,40);symbol="q"
+    wizard2=Wizard(15,65);symbol="r"
+    wizard3=Wizard(34,60);symbol="s"
+    wizard4=Wizard(34,10);symbol="t"
+    cannon8=Cannon(2,35)
+    global buildings,defenses
+    buildings=[th,h1,h2,h3,h4,h5,h6,h7,h8,cannon7,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,wizard1,wizard2]
+    defenses=[wizard1,wizard2,cannon1,cannon2,cannon3,cannon4,cannon5,cannon6]
+    global cannons
+    cannons=[cannon1,cannon2,cannon3,cannon4,cannon5,cannon6,cannon7,cannon8]
+    global wizards
+    wizards=[wizard1,wizard2,wizard3,wizard4]
+
+
+    thpos=(21,38)
+    symbol="w"
+    wall1_attrib=(20,15)
+    wall1_start=(thpos[0]+2,thpos[1]-wall1_attrib[0])
+    for i in range(wall1_attrib[0]):
+        w=Wall(thpos[0]+2,thpos[1]-wall1_attrib[0]+i)
+        walls.update({str(thpos[0]+2)+"_"+str(thpos[1]-wall1_attrib[0]+i):w})
+    for i in range(wall1_attrib[1]):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1])
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]):w})
+    for i  in range(wall1_attrib[0]+2):
+        w=Wall(wall1_start[0]-wall1_attrib[1],wall1_start[1]+i)
+        walls.update({str(wall1_start[0]-wall1_attrib[1])+"_"+str(wall1_start[1]+i):w})
+    for i in range(wall1_attrib[1]-2):
+        w=Wall(wall1_start[0]-wall1_attrib[1]+i,wall1_start[1]+wall1_attrib[0]+2)
+        walls.update({str(wall1_start[0]-wall1_attrib[1]+i)+"_"+str(wall1_start[1]+wall1_attrib[0]+2):w})
+
+
+    wall2_attrib=(20,15)
+    wall2="/"*wall2_attrib[0]
+    wall2_start=(thpos[0]-wall2_attrib[1]+3,thpos[1]+3)
+    for i in range(wall2_attrib[0]):
+        w=Wall(wall2_start[0],wall2_start[1]+i)
+        walls.update({str(wall2_start[0])+"_"+str(wall2_start[1]+i):w})
+    for i in range(wall2_attrib[1]+8):
+        w=Wall(wall2_start[0]+i,wall2_start[1]+wall2_attrib[0])
+        walls.update({str(wall2_start[0]+i)+"_"+str(wall2_start[1]+wall2_attrib[0]):w})
+    end =i    
+    for i in range(wall2_attrib[0]*2):
+        w=Wall(wall2_start[0]+end,wall2_start[1]-wall2_attrib[0]+i)
+        walls.update({str(wall2_start[0]+end)+"_"+str(wall2_start[1]-wall2_attrib[0]+i):w})
+    endwall=(thpos[0]+2,wall2_start[1]-wall2_attrib[0])
+    for i in range(wall2_start[0]+end-(thpos[0]+startx)+1):
+        w=Wall(endwall[0]+i,endwall[1])
+        walls.update({str(endwall[0]+i)+"_"+str(endwall[1]):w})
+    
+    
+    wall5="/"*15
+    wall5_start=(18,3)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,3)
+        walls.update({str(wall5_start[0]+i)+"_"+str(3):w})
+    
+    wall5_start=(42,3)
+    wall5="/"*76
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+    
+    wall5_start=(30,47)   
+    for i in range(1,13):
+        w=Wall(wall5_start[0]+i,47)
+        walls.update({str(wall5_start[0]+i)+"_"+str(47):w})
+        
+    
+    wall5="/"*18
+    wall5_start=(18,62)
+    for i in range(len(wall5)):
+        w=Wall(wall5_start[0],wall5_start[1]+i)
+        walls.update({str(wall5_start[0])+"_"+str(wall5_start[1]+i):w})
+        
+        
+    wall5_start=(18,79)   
+    for i in range(1,25):
+        w=Wall(wall5_start[0]+i,79)
+        walls.update({str(wall5_start[0]+i)+"_"+str(79):w})
+
+    
+    
 starttick=time.time()
 #-----------------------------------------------Main Code------------------------------------
 def getinput():
@@ -1043,7 +1254,7 @@ def animate():
             
     
 
-level_1()
+level_3()
 while(1):
     os.system("stty -echo")
     ans=input_to(getinput,timeout)
@@ -1060,6 +1271,23 @@ while(1):
     print("\r",end="")
     time.sleep(timeout)
     termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+
+for i in range(len(buildings)):
+    buildings[i].clear()
+for i in walls:
+    walls[i].clear()
+for i in range(len(barabarians)):
+    barabarians[i].destroy(barabarians[i].x,barabarians[i].y,barabarians[i].clear)
+    
+for i in range(len(archers)):
+    archers[i].destroy(archers[i].x,archers[i].y,archers[i].clear)
+for i in range(len(ballons)):
+    ballons[i].destroy(ballons[i].x,ballons[i].y,ballons[i].clear)
+if(king_spawned):
+    k.destroy(k.x,k.y,k.clear)
+    
+    
+level_2()
     
 f.write(str(capture))
 total.close()
